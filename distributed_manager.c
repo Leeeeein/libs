@@ -8,7 +8,6 @@ int distributed_manager_init(DM* dm)
 	return 0;
 }
 
-#pragma region RpcServices
 // 服务端的加法服务
 char* add(const char* params) {
   int a, b, c;
@@ -46,9 +45,7 @@ char* rpc_exit_cluster(const char* params) {
 	sprintf(result, "%d", ret);
 	return result;
 }
-#pragma endregion
 
-#pragma region threads
 void* thread_command()
 {
 	char buf[64];
@@ -151,7 +148,7 @@ void* thread_client(DM* dm)
 	}
 	return NULL;	
 }
-#pragma endregion
+
 // 以raw规则处理收到的消息
 void process_raw_message(int socket_fd, char* request_buf)
 {
@@ -187,13 +184,30 @@ int distributed_manager_remove_node(int node_id)
 }
 
 // 向分布式管理机提交一个任务
-void distributed_manager_submit_task(DM* dm, const char* task_id, const char* command, const char* dependencies, int num_dependencies);
+int distributed_manager_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies)
+{
+	int ret = scheduler_submit_task(task_id, command, dependencies, num_dependencies);
+	return ret;
+}
 
 // 从分布式管理机中撤销一个任务
 void distributed_manager_cancel_task(DM* dm, const char* task_id);
 
 // 获取任务的执行状态
 int distributed_manager_get_task_status(DM* dm, const char* task_id);
+
+// 启动指定编号的任务
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes)
+{
+	int nodes[max_nodes];
+	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+	for(int i = 0; i < num_usable; i++)
+	{
+		int ret = send_packet(nodes[i], COMMON, task_id, sizeof(task_id), 0);
+	}
+	return;
+	
+}
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(DM* dm, const char* strategy);

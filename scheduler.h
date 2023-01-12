@@ -48,13 +48,16 @@ int scheduler_add_node(int node_id);
 int scheduler_remove_node(int node_id);
 
 // 向调度机提交一个任务
-void scheduler_submit_task(scheduler* sche, const char* task_id, const char* command, const char* dependencies, int num_dependencies);
+int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies);
 
 // 从调度机中撤销一个任务
 void scheduler_cancel_task(scheduler* sche, const char* task_id);
 
 // 获取任务的执行状态
 int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status);
+
+// 获取当前可以使用的计算节点fd数组
+int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num);
 
 // 释放调度机资源
 void scheduler_cleanup(scheduler* sche);

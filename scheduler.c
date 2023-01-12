@@ -63,15 +63,15 @@ int scheduler_remove_node(int node_id) {
     return 0;
 }
 
-void scheduler_submit_task(scheduler* sche, const char* task_id, const char* command, const char* dependencies, int num_dependencies) {
-    /*if (sche == NULL) {
-        return;  // sche not initialized
+int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies) {
+    if (sche == NULL) {
+        return -1;  // sche not initialized
     }
     if (sche->num_tasks == MAX_TASKS) {
-        return;  // too many tasks
+        return -2;  // too many tasks
     }
 
-    struct task* new_task = malloc(sizeof(struct task));
+    struct task* new_task = malloc(sizeof(task));
     strncpy(new_task->id, task_id, sizeof(new_task->id));
     strncpy(new_task->command, command, sizeof(new_task->command));
     new_task->num_dependencies = num_dependencies;
@@ -81,7 +81,8 @@ void scheduler_submit_task(scheduler* sche, const char* task_id, const char* com
     }
     new_task->status = 0;  // 0 means pending
     sche->tasks[sche->num_tasks] = new_task;
-    sche->num_tasks++;*/
+    sche->num_tasks++;
+    return 0;
 }
 
 void scheduler_cancel_task(scheduler* sche, const char* task_id) {
@@ -128,6 +129,23 @@ int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status)
     return 0;
 }
 
+int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {
+	int num_nodes = sche->num_nodes;
+	int occu_cnt = 0;
+	int idx = 0;
+	for(int i = 0; i < num_nodes; i++)
+	{
+		if(occu_cnt == max_nodes_num)
+			break;
+		node* cur_node = sche->nodes[i];
+		if(1 == cur_node->status)
+			continue;
+		nodes_fd[idx] = sche->nodes[i]->fd;
+		++idx;
+		++occu_cnt;
+	}
+	return occu_cnt;
+}
 void scheduler_cleanup(scheduler* sche) {
     /*if (sche == NULL) {
         return;  // sche not initialized

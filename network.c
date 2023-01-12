@@ -1,0 +1,136 @@
+#ifndef NETWORK_LIBRARY_H
+#define NETWORK_LIBRARY_H
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#define MAX_PACKET_SIZE 65536
+
+typedef struct {
+	size_t size;
+	int type;
+} dataHeader;
+
+typedef struct {
+    dataHeader header;
+    void *data;
+} packet;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int create_server(const char *ip, int port);
+int create_client(const char *ip, int port);
+packet *read_packet(int fd);
+int write_packet(int fd, packet *pkt);
+void free_packet(packet *pkt);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // NETWORK_LIBRARY_H
+
+int create_server(const char *ip, int port) {
+    int sockfd;
+    struct sockaddr_in server_addr;
+
+    // create socket
+    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd < 0) {
+        perror("socket");
+        return -1;
+    }
+    
+    // set server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(ip);
+    server_addr.sin_port = htons(port);
+
+    // bind address with socket
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("bind");
+        close(sockfd);
+        return -2;
+    }
+    
+    // set port reuse
+	int optval = 1;
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+
+    // listen socket
+    if (listen(sockfd, 10) < 0) {
+        perror("listen");
+        close(sockfd);
+        return -3;
+    }
+
+    return sockfd;
+}
+
+int create_client(const char *ip, int port) {
+    int sockfd;
+    struct sockaddr_in server_addr;
+
+    // create socket
+    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sockfd < 0) {
+        perror("socket");
+        return -1;
+    }
+
+    // set client address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(ip);
+    server_addr.sin_port = htons(port);
+
+    // connect server
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("connect");
+        close(sockfd);
+        return -1;
+    }
+
+    return sockfd;
+}
+
+int send_packet(int sockfd, int type, const void *buf, size_t len, int flags) {
+    packet p;
+    p.header.size = len;
+    p.header.type = type;
+    p.data = (void *)buf;
+    void *buffer = malloc(len + sizeof(dataHeader));
+    memcpy(buffer, &p.header, sizeof(dataHeader));
+    memcpy(((char*)buffer) + sizeof(dataHeader), p.data, p.header.size);
+    int res = send(sockfd, buffer, len + sizeof(dataHeader), flags);
+    free(buffer);
+    return res;
+}
+
+int recv_packet(int sockfd, int* type, void *buf, size_t len, int flags)
+{	
+	dataHeader header;
+	header.size = 0;
+	header.type = 0;
+	if(0 == recv(sockfd, &header, sizeof(dataHeader), 0))
+	{
+		return 0;
+	}
+	*type = header.type;
+	recv(sockfd, buf, header.size, flags);
+	return header.size;
+}
+
+void free_packet(packet *pkt) {
+    free(pkt->data);
+    free(pkt);
+}

@@ -19,9 +19,11 @@ typedef enum {
 } log_level_t;
 
 typedef struct {
+
 	log_level_t level;
 	FILE *outputs[10];
 	int output_count;
+	pthread_mutex_t mutex;
 } logger_t;
 
 int log_init();

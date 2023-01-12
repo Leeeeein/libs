@@ -8,6 +8,7 @@ int distributed_manager_init(DM* dm)
 	return 0;
 }
 
+#pragma region RpcServices
 // 服务端的加法服务
 char* add(const char* params) {
   int a, b, c;
@@ -26,18 +27,28 @@ char* subtract(const char* params) {
   return result;
 }
 
-
-
+// 服务端提供的节点加入集群的服务
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
 	int ret = distributed_manager_add_node(cfd);
-	printf("rpc 服务端收到请求： ret: %d\n", ret);
-	static char ss[16] = "11";
-	return ss;
-	
+	static char result[16];
+	sprintf(result, "%d", ret);
+	return result;
 }
 
+// 服务端提供的节点退出集群的服务
+char* rpc_exit_cluster(const char* params) {
+	int a,b,cfd;
+	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
+	int ret = distributed_manager_remove_node(cfd);
+	static char result[16];
+	sprintf(result, "%d", ret);
+	return result;
+}
+#pragma endregion
+
+#pragma region threads
 void* thread_command()
 {
 	char buf[64];
@@ -104,6 +115,7 @@ void* thread_client(DM* dm)
 				   FD_CLR(fd, &fds);
 				   memset(request_buf, 0, sizeof(request_buf));
 				   printf("Client disconnected, fd closed.\n");
+				   distributed_manager_remove_node(fd);
 				   continue;
 				}
 				switch(type)
@@ -139,7 +151,7 @@ void* thread_client(DM* dm)
 	}
 	return NULL;	
 }
-
+#pragma endregion
 // 以raw规则处理收到的消息
 void process_raw_message(int socket_fd, char* request_buf)
 {
@@ -160,9 +172,6 @@ void process_rpc_message(int socket_fd, char* request_buf)
 	printf("send finish. length:[%d]\n", ret);
 }
 
-// 初始化分布式管理机
-int distributed_manager_init(DM* dm);
-
 // 向分布式管理机添加一个子节点
 int distributed_manager_add_node(int node_id)
 {
@@ -171,7 +180,11 @@ int distributed_manager_add_node(int node_id)
 }
 
 // 从分布式管理机中移除一个子节点
-void distributed_manager_remove_node(DM* dm, const char* node_id);
+int distributed_manager_remove_node(int node_id)
+{
+	int ret = scheduler_remove_node(node_id);
+	return ret;
+}
 
 // 向分布式管理机提交一个任务
 void distributed_manager_submit_task(DM* dm, const char* task_id, const char* command, const char* dependencies, int num_dependencies);
@@ -228,6 +241,7 @@ int main(int argc, char **argv) {
 	rpc_publish("add", add);
 	rpc_publish("subtract", subtract);
 	rpc_publish("join_cluster", rpc_join_cluster);
+	rpc_publish("exit_cluster", rpc_exit_cluster);
 	pthread_t id1, id2;
 	pthread_create(&id1, NULL, (void*)thread_client, &dm);
 	pthread_create(&id2, NULL, (void*)thread_command, NULL);

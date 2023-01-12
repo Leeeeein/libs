@@ -4,6 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include "log.h"
+#include <pthread.h>
 
 logger_t *logger = NULL;
 
@@ -14,6 +15,7 @@ int log_init()
         return -1;  // already initialized
     }
     logger = malloc(sizeof(logger_t));
+    pthread_mutex_init(&(logger->mutex), NULL);
     logger->level = LOG_LEVEL_INFO;
     logger->output_count = 0;
     
@@ -21,6 +23,7 @@ int log_init()
     FILE *log_file = fopen("application.log", "a");
     add_log_output(log_file);
     set_log_level(LOG_LEVEL_DEBUG);
+    
     
     return 0;
 }
@@ -31,6 +34,7 @@ void log_uninit()
     {
         return;  // already uninitialized
     }
+    pthread_mutex_destroy(&logger->mutex);
     int i;
     for (i = 0; i < logger->output_count; i++)
     {
@@ -48,7 +52,9 @@ void add_log_output(FILE *output)
     {
         return;
     }
+    pthread_mutex_lock(&(logger->mutex));
     logger->outputs[logger->output_count++] = output;
+    pthread_mutex_unlock(&(logger->mutex));
 }
 
 // Set the log level for the logger
@@ -58,7 +64,9 @@ void set_log_level(log_level_t level)
     {
         return;
     }
+    pthread_mutex_lock(&(logger->mutex));
     logger->level = level;
+    pthread_mutex_unlock(&(logger->mutex));
 }
 
 void log_message(log_level_t level, const char *fmt, ...)
@@ -67,8 +75,10 @@ void log_message(log_level_t level, const char *fmt, ...)
     {
         return;
     }
+    pthread_mutex_lock(&(logger->mutex));
     if (level < logger->level)
     {
+    	pthread_mutex_unlock(&(logger->mutex));
         return;
     }
 
@@ -123,5 +133,6 @@ void log_message(log_level_t level, const char *fmt, ...)
         fprintf(logger->outputs[i], "\n");
         va_end(args);
    }
+   pthread_mutex_unlock(&(logger->mutex));
 }
 

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -fPIC
+CFLAGS = -Wall -fPIC -lpthread
 
 all: c s  rpc_C disMana 
 

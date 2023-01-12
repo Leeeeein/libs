@@ -31,19 +31,25 @@ int scheduler_add_node(int node_id) {
     }
 
     node* new_node = malloc(sizeof(node));
+    new_node->fd = node_id;
+    new_node->status = 0;
     sche->nodes[sche->num_nodes] = new_node;
     sche->num_nodes++;
     return 0;
 }
 
-int scheduler_remove_node(scheduler* sche, const char* node_id) {
-    /*if (sche == NULL) {
+int scheduler_remove_node(int node_id) {
+    if (sche == NULL) {
         return -1;  // sche not initialized
+    }
+    if(sche->num_nodes == 0)
+    {
+    	return -2;
     }
 
     int found = 0;
     for (int i = 0; i < sche->num_nodes; i++) {
-        if (strcmp(sche->nodes[i]->id, node_id) == 0) {
+        if (sche->nodes[i]->fd == node_id) {
             found = 1;
             free(sche->nodes[i]);
             sche->nodes[i] = sche->nodes[sche->num_nodes - 1];
@@ -54,7 +60,6 @@ int scheduler_remove_node(scheduler* sche, const char* node_id) {
     if (!found) {
         return -2;  // node not found
     }
-*/
     return 0;
 }
 

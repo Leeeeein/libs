@@ -12,6 +12,7 @@ typedef struct {
 
 typedef struct node {
     int fd;
+    int status;
 } node;
 
 typedef struct task {
@@ -44,7 +45,7 @@ int scheduler_init();
 int scheduler_add_node(int node_id);
 
 // 从调度机中移除一个子节点
-int scheduler_remove_node(scheduler* sche, const char* node_id);
+int scheduler_remove_node(int node_id);
 
 // 向调度机提交一个任务
 void scheduler_submit_task(scheduler* sche, const char* task_id, const char* command, const char* dependencies, int num_dependencies);

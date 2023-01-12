@@ -31,7 +31,6 @@ DM收到消息，用RPC提供的序列化反序列化机制处理，然后操纵
 
 typedef struct distributed_manager
 {
-	scheduler* m_scheduler;	//调度机结构体
 	IniConfigManager* m_cfg;	//manager配置文件管理器
 	int socket_fd;	//manager占用的文件描述符
 } DM;
@@ -58,7 +57,7 @@ int distributed_manager_init(DM* dm);
 int distributed_manager_add_node(int node_id);
 
 // 从分布式管理机中移除一个子节点
-void distributed_manager_remove_node(DM* dm, const char* node_id);
+int distributed_manager_remove_node(int node_id);
 
 // 向分布式管理机提交一个任务
 void distributed_manager_submit_task(DM* dm, const char* task_id, const char* command, const char* dependencies, int num_dependencies);

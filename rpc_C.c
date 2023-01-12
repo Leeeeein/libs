@@ -44,19 +44,22 @@ int main(int argc, char *argv[]) {
   rpc_response_t* response2 = rpc_deserialize_response(response_buf);
   printf("request line is: %s, Result2: %s\n", request2_str, response2->result);
   
-  /*
+  
   // 发起第三次远程调用
   rpc_request_t request3 = {
-    .method = "add",
-    .params = "4,5"
+    .method = "exit_cluster",
+    .params = "30,35"
   };
+  int typ3 = 0;
   char* request3_str = rpc_serialize_request(&request3);
-  send(sockfd, request3_str, strlen(request3_str)+1, 0);
-  recv(sockfd, response_buf, sizeof(response_buf), 0);
+  send_packet(sockfd, RPC, request3_str, strlen(request3_str)+1, 0);
+  recv_packet(sockfd, &typ3, response_buf, sizeof(response_buf), 0);
   rpc_response_t* response3 = rpc_deserialize_response(response_buf);
   printf("request line is: %s, Result1: %s\n", request3_str, response3->result);
 
-  */
+  
+
+  //while(1){}
   close(sockfd);
 
   return 0;

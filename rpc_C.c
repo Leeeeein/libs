@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   char response_buf[1024];
 
   // 发起第一次远程调用
-  rpc_request_t request1 = {
+  /*rpc_request_t request1 = {
     .method = "add",
     .params = "15,25"
   };
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
   recv_packet(sockfd, &typ1, response_buf, sizeof(response_buf), 0);
   rpc_response_t* response1 = rpc_deserialize_response(response_buf);
   printf("request line is: %s, Result1: %s\n", request1_str, response1->result);
-  
+  */
   
   // 发起第二次远程调用
   rpc_request_t request2 = {

@@ -19,7 +19,7 @@ rpc_C: rpc_C.c $(wildcard *.so)
 	$(CC) $(CFLAGS) -o rpc_CS rpc_C.c network.c rpc.c $(wildcard *.so)
 	
 disMana: distributed_manager.c $(wildcard *.so)
-	$(CC) $(CFLAGS) -o disMana distributed_manager.c scheduler.c log.c network.c rpc.c config.c message_queue.c $(wildcard *.so)
+	$(CC) $(CFLAGS) -o disMana distributed_manager.c scheduler.c log.c network.c rpc.c config.c message_queue.c map.c $(wildcard *.so)
 
 	
 %.so: %.c

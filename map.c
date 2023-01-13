@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "umap.h"
+#include "map.h"
 
 void init(Map* map) {
   map->capacity = INITIAL_CAPACITY;

@@ -19,7 +19,7 @@ typedef struct message_queue {
 
 void init_queue(struct message_queue *queue);
 
-int enqueue(struct message_queue *queue, char *data);
+int enqueue(struct message_queue *queue, int fd, char *data);
 
 int dequeue(struct message_queue *queue, char *data);
 

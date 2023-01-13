@@ -1,34 +1,24 @@
 #include <stdlib.h>
-#include "distributed_manager.h"
-#include "message_queue.h"
 #include <pthread.h>
 #include <sys/ioctl.h>
 
+#include "map.h"
+#include "distributed_manager.h"
+#include "message_queue.h"
+
 static message_queue mq;
+static char result_cache[4096];
+
 int distributed_manager_init(DM* dm)
 {
 	return 0;
 }
 
-// 服务端的加法服务
-char* add(const char* params) {
-  int a, b, c;
-  sscanf(params, "%d,%d,%d", &a, &b, &c);
-  static char result[16];
-  sprintf(result, "%d", a + b);
-  return result;
-}
-
-// 服务端的减法服务
-char* subtract(const char* params) {
-  int a, b;
-  sscanf(params, "%d,%d", &a, &b);
-  static char result[16];
-  sprintf(result, "%d", a - b);
-  return result;
-}
-
-// 服务端提供的节点加入集群的服务
+/* 
+ *  Section : 服务函数
+ *  Purpose: 集中定义rpc的服务端服务函数
+ */
+ 
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
@@ -38,7 +28,6 @@ char* rpc_join_cluster(const char* params) {
 	return result;
 }
 
-// 服务端提供的节点退出集群的服务
 char* rpc_exit_cluster(const char* params) {
 	int a,b,cfd;
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
@@ -48,6 +37,11 @@ char* rpc_exit_cluster(const char* params) {
 	return result;
 }
 
+
+/* 
+ *  Section : 线程函数
+ *  Purpose: 集中定义文件中的线程函数
+ */
 void* thread_command()
 {
 	char buf[64];
@@ -144,10 +138,32 @@ void* thread_client(DM* dm)
 	return NULL;	
 }
 
+void* thread_fetch(int num, message_queue* mq, Map* map)
+{
+	int recv_count = 0;
+	while(1){
+		if(mq->size != 0)
+		{
+			char tmp[2048];
+			if(-1 == dequeue(mq, tmp)){
+				LOG_ERROR("dequeue error.");
+			}
+			
+		}
+		
+	}
+}
+
+/* 
+ *  Section : 数据处理函数
+ *  Purpose: 对收到的数据包根据类别进行处理
+ */
+ 
 // 以raw规则处理收到的消息
 void process_raw_message(int socket_fd, char* request_buf)
 {
-	enqueue(&mq, request_buf);
+	// 因为在scheduler中每个计算节点是用文件描述符表示的，所以收到数据后，使用文件描述符在map中可以定位这是第几个节点的任务，就可以放回相应的位置
+	enqueue(&mq, socket_fd, request_buf);
 	LOG_DEBUG("queue size: %d\n", mq.size);
 }
 
@@ -198,7 +214,7 @@ void distributed_manager_cancel_task(DM* dm, const char* task_id);
 int distributed_manager_get_task_status(DM* dm, const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes)
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, Map* map)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
@@ -209,6 +225,9 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 		{
 			
 		}
+		char tmp[32];
+		sprintf(tmp, "%d", nodes[i]);
+		insert(map, tmp, i);
 	}
 	return;
 	
@@ -229,6 +248,8 @@ int main(int argc, char **argv) {
 	}
 	
 	DM dm;
+	Map map;
+	init(&map);
 	// dm.m_log = get_logger();
 	distributed_manager_init(&dm);
 	log_init();
@@ -258,8 +279,6 @@ int main(int argc, char **argv) {
     LOG_INFO("监听服务端创建完成.");
 	dm.socket_fd = ret;
 	rpc_init();
-	rpc_publish("add", add);
-	rpc_publish("subtract", subtract);
 	rpc_publish("join_cluster", rpc_join_cluster);
 	rpc_publish("exit_cluster", rpc_exit_cluster);
 	pthread_t id1, id2;

@@ -26,6 +26,7 @@ DM收到消息，用RPC提供的序列化反序列化机制处理，然后操纵
 #include "rpc.h"
 #include "scheduler.h"
 #include "config.h"
+#include "message_queue.h"
 #ifndef DISTRIBUTED_MANAGER_H
 #define DISTRIBUTED_MANAGER_H
 
@@ -41,6 +42,9 @@ void* thread_client(DM* dm);
 // 接受输入的命令，方便调试
 void* thread_command();
 
+// 从消息队列中取结果数据的线程
+void* thread_fetch(int num, message_queue* mq, Map* map);
+
 // 信息处理
 void message_process(int type, int fd, char* request_buf);
 
@@ -50,7 +54,7 @@ void process_rpc_message(int socket_fd, char* request_buf);
 // 处理raw消息的分支函数
 void process_raw_message(int socket_fd, char* request_buf);
 
-//处理result消息的分支函数
+// 处理result消息的分支函数
 void process_res_message(int socket_fd, char* request_buf);
 
 // 订阅的rpc函数
@@ -75,7 +79,7 @@ void distributed_manager_cancel_task(DM* dm, const char* task_id);
 int distributed_manager_get_task_status(DM* dm, const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes);
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, Map* map);
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(DM* dm, const char* strategy);

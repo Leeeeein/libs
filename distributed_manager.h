@@ -41,11 +41,17 @@ void* thread_client(DM* dm);
 // 接受输入的命令，方便调试
 void* thread_command();
 
-// 处理rpc消息分支的函数
+// 信息处理
+void message_process(int type, int fd, char* request_buf);
+
+// 处理rpc消息的分支函数
 void process_rpc_message(int socket_fd, char* request_buf);
 
-// 处理raw消息分支的函数
+// 处理raw消息的分支函数
 void process_raw_message(int socket_fd, char* request_buf);
+
+//处理result消息的分支函数
+void process_res_message(int socket_fd, char* request_buf);
 
 // 订阅的rpc函数
 char* rpc_join_cluster();

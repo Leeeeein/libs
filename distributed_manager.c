@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include "distributed_manager.h"
+#include "message_queue.h"
 #include <pthread.h>
 #include <sys/ioctl.h>
 
+static message_queue mq;
 int distributed_manager_init(DM* dm)
 {
 	return 0;
@@ -66,83 +68,76 @@ void* thread_command()
 	}
 }
 
+void message_process(int type, int fd, char* request_buf)
+{
+	switch(type)
+	{
+		case UNDEFINE:
+		{
+			LOG_DEBUG("message not defined.\n");
+			break;
+		}
+		case RAW:
+		{
+			process_raw_message(fd, request_buf);
+			break;
+		}
+		case RPC:
+		{
+			process_rpc_message(fd, request_buf);
+			break;
+		}
+		case RES:
+		{
+			process_res_message(fd, request_buf);
+			break;
+		}
+		case COMMON:
+		{
+			//todo
+			//
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+}
+
 void* thread_client(DM* dm)
 {	
 	int sockfd = dm->socket_fd;
-	char request_buf[1024];
-	// char response_buf[1024];
-
+	int max_fd = sockfd;
 	fd_set fds;
 	FD_SET(sockfd, &fds);
-	int max_fd = sockfd;
-	// 循环处理客户端的请求
+	char request_buf[1024];
 	while (1) {
 		fd_set read_fds = fds;
 		int ret = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
 		if (ret <= 0) {
-			fprintf(stderr, "select error\n");
 			break;
 		}
-		if (FD_ISSET(sockfd, &read_fds)) {
-			struct sockaddr_in client_addr;
-			socklen_t addrlen = sizeof(client_addr);
-			int client_sock = accept(sockfd, (struct sockaddr *)&client_addr, &addrlen);
-			if (client_sock < 0) {
-				fprintf(stderr, "accept error\n");
-				continue;
-			}
-			FD_SET(client_sock, &fds);
-			if (client_sock > max_fd) {
-				max_fd = client_sock;
-			}
+		if(FD_ISSET(sockfd, &read_fds) && -1 == create_connect(sockfd, &fds, &max_fd)){
+			continue;
 		}
 		for (int fd = 0; fd <= max_fd; ++fd) {
 			if (FD_ISSET(fd, &read_fds) && fd != sockfd) {
 				// 从客户端接收请求
 				int type = 0;
 				ret = recv_packet(fd, &type, request_buf, sizeof(request_buf), 0);
-
-				int len = strlen(request_buf);
-				sprintf(request_buf + len, "socket[%d].", fd);
-
-				printf("recv ret: %d, message type: %d\n", ret, type);
+				sprintf(request_buf + strlen(request_buf), "socket[%d].", fd);
+				LOG_INFO("recv ret: %d, message type: %d\n", ret, type);
 				if(ret <= 0)
 				{
 				   close(fd);
 				   FD_CLR(fd, &fds);
 				   memset(request_buf, 0, sizeof(request_buf));
-				   printf("Client disconnected, fd closed.\n");
+				   LOG_INFO("客户端退出连接.[fd:%d].\n", fd);
 				   distributed_manager_remove_node(fd);
 				   continue;
 				}
-				switch(type)
-				{
-					case UNDEFINE:
-					{
-						LOG_DEBUG("message not defined.\n");
-						break;
-					}
-					case RAW:
-					{
-						process_raw_message(fd, request_buf);
-						break;
-					}
-					case RPC:
-					{
-						process_rpc_message(fd, request_buf);
-						break;
-					}
-					case COMMON:
-					{
-						//todo
-						//
-						break;
-					}
-					default:
-					{
-						break;
-					}
-				}
+				message_process(type, fd, request_buf);
 			}
 		}	
 	}
@@ -152,7 +147,8 @@ void* thread_client(DM* dm)
 // 以raw规则处理收到的消息
 void process_raw_message(int socket_fd, char* request_buf)
 {
-
+	enqueue(&mq, request_buf);
+	LOG_DEBUG("queue size: %d\n", mq.size);
 }
 
 // 以rpc规则处理收到的消息
@@ -165,8 +161,13 @@ void process_rpc_message(int socket_fd, char* request_buf)
 	rpc_response_t* response = rpc_execute_request(socket_fd, request);
 	char* response_str = rpc_serialize_response(response);
 	printf("response string: |%s| \n", response_str);
-	ret = send_packet(socket_fd, COMMON, response_str, sizeof(response_str), 0);
+	ret = send_packet(socket_fd, RAW, response_str, sizeof(response_str), 0);
 	printf("send finish. length:[%d]\n", ret);
+}
+
+void process_res_message(int socket_fd, char* request_buf)
+{
+	
 }
 
 // 向分布式管理机添加一个子节点
@@ -203,7 +204,11 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
 	for(int i = 0; i < num_usable; i++)
 	{
-		int ret = send_packet(nodes[i], COMMON, task_id, sizeof(task_id), 0);
+		int ret = send_packet(nodes[i], RAW, task_id, sizeof(task_id), 0);
+		if(ret < 0)
+		{
+			
+		}
 	}
 	return;
 	
@@ -228,6 +233,7 @@ int main(int argc, char **argv) {
 	distributed_manager_init(&dm);
 	log_init();
 	scheduler_init();
+	init_queue(&mq);
 	dm.m_cfg = ini_config_manager_create("config.ini");
 	if (dm.m_cfg == NULL) {
     	//LOG_DEBUG(dm.m_log, "Error creating INI config manager.\n");

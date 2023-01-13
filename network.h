@@ -10,13 +10,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/select.h>
 
 #define MAX_PACKET_SIZE 65536
 
 enum message_type{
 	UNDEFINE = -1,
-	RAW = 0,
-	RPC = 1,
+	RAW,
+	RPC,
+	RES,
 	COMMON,
 };
 
@@ -37,8 +39,7 @@ extern "C" {
 
 int create_server(const char *ip, int port);
 int create_client(const char *ip, int port);
-packet *read_packet(int fd);
-int write_packet(int fd, packet *pkt);
+int create_connect(int sockfd, fd_set* p_fds, int* max_fd);
 int send_packet(int sockfd, int type, const void *buf, size_t len, int flags);
 int recv_packet(int sockfd, int* type, void *buf, size_t len, int flags);
 void free_packet(packet *pkt);

@@ -1,6 +1,3 @@
-#ifndef NETWORK_LIBRARY_H
-#define NETWORK_LIBRARY_H
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,22 +18,6 @@ typedef struct {
     dataHeader header;
     void *data;
 } packet;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int create_server(const char *ip, int port);
-int create_client(const char *ip, int port);
-packet *read_packet(int fd);
-int write_packet(int fd, packet *pkt);
-void free_packet(packet *pkt);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  // NETWORK_LIBRARY_H
 
 int create_server(const char *ip, int port) {
     int sockfd;
@@ -103,6 +84,24 @@ int create_client(const char *ip, int port) {
     return sockfd;
 }
 
+int create_connect(int sockfd, fd_set* p_fds, int* max_fd)
+{
+	struct sockaddr_in client_addr;
+	socklen_t addrlen = sizeof(client_addr);
+	int client_sock = accept(sockfd, (struct sockaddr*)&client_addr, &addrlen);
+	if(client_sock < 0)
+	{
+		return -1;
+	}
+
+	FD_SET(client_sock, p_fds);
+	if(client_sock > *max_fd){
+		*max_fd = client_sock ;
+	}
+
+	return client_sock;
+}
+		
 int send_packet(int sockfd, int type, const void *buf, size_t len, int flags) {
     packet p;
     p.header.size = len;

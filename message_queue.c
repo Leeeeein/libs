@@ -8,7 +8,8 @@
 typedef struct message {
     char data[MAX_MESSAGE_LENGTH];
     struct message *next;
-    int fd; // 每个收到的数据都标记其描述符
+    int message_size;
+    int id; // 每个收到的数据都标记其描述符
 } message;
 
 typedef struct message_queue {
@@ -25,13 +26,15 @@ void init_queue(struct message_queue *queue) {
     pthread_mutex_init(&queue->lock, NULL);
 }
 
-int enqueue(struct message_queue *queue, int fd, char *data) {
+int enqueue(struct message_queue *queue, int fd, int data_size, char *data) {
     struct message *new_message = (struct message*)malloc(sizeof(struct message));
     if (new_message == NULL) {
         return -1;
     }
 
     strncpy(new_message->data, data, MAX_MESSAGE_LENGTH);
+    new_message->id = fd;
+    new_message->message_size = data_size;
     new_message->next = NULL;
 
     pthread_mutex_lock(&queue->lock);

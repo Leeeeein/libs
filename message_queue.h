@@ -5,10 +5,12 @@
 
 typedef struct message_queue message_queue;
 typedef struct message message;
-struct message {
+typedef struct message {
     char data[MAX_MESSAGE_LENGTH];
     struct message *next;
-};
+    int message_size;
+    int id; // 每个收到的数据都标记其描述符
+} message;
 
 typedef struct message_queue {
     struct message *head;
@@ -19,7 +21,7 @@ typedef struct message_queue {
 
 void init_queue(struct message_queue *queue);
 
-int enqueue(struct message_queue *queue, int fd, char *data);
+int enqueue(struct message_queue *queue, int fd, int data_size, char *data);
 
 int dequeue(struct message_queue *queue, char *data);
 

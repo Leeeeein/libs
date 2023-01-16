@@ -26,5 +26,6 @@ void free_map(Map* map);
 MapIterator get_iterator(Map* map);
 int has_next(MapIterator* iterator);
 MapEntry next(MapIterator* iterator);
+void map_clean(Map* map);
 
 #endif

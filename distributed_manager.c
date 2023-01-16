@@ -7,12 +7,10 @@
 #include "message_queue.h"
 
 static message_queue mq;
+static pthread_t pFetch;
+static Map map;
+static int server_fd;
 static char result_cache[4096];
-
-int distributed_manager_init(DM* dm)
-{
-	return 0;
-}
 
 /* 
  *  Section : 服务函数
@@ -62,7 +60,7 @@ void* thread_command()
 	}
 }
 
-void message_process(int type, int fd, char* request_buf)
+void message_process(int type, int fd, int recv_size, char* request_buf)
 {
 	switch(type)
 	{
@@ -73,7 +71,7 @@ void message_process(int type, int fd, char* request_buf)
 		}
 		case RAW:
 		{
-			process_raw_message(fd, request_buf);
+			process_raw_message(fd, recv_size, request_buf);
 			break;
 		}
 		case RPC:
@@ -99,9 +97,9 @@ void message_process(int type, int fd, char* request_buf)
 	}
 }
 
-void* thread_client(DM* dm)
+void* thread_client()
 {	
-	int sockfd = dm->socket_fd;
+	int sockfd = server_fd;
 	int max_fd = sockfd;
 	fd_set fds;
 	FD_SET(sockfd, &fds);
@@ -131,27 +129,38 @@ void* thread_client(DM* dm)
 				   distributed_manager_remove_node(fd);
 				   continue;
 				}
-				message_process(type, fd, request_buf);
+				message_process(type, fd, ret, request_buf);
 			}
 		}	
 	}
 	return NULL;	
 }
 
-void* thread_fetch(int num, message_queue* mq, Map* map)
+void* thread_fetch(int* num)
 {
 	int recv_count = 0;
+	int size_recv = 0;
 	while(1){
-		if(mq->size != 0)
+		if(mq.size != 0)
 		{
 			char tmp[2048];
-			if(-1 == dequeue(mq, tmp)){
+			if(-1 == dequeue(&mq, tmp)){
 				LOG_ERROR("dequeue error.");
 			}
-			
+			else
+			{
+				recv_count += 1;
+				// 把tmp中的data拷贝到result_cache中来
+				memcpy(result_cache + size_recv, ((message*)tmp)->data, ((message*)tmp)->message_size);
+				size_recv += ((message*)tmp)->message_size;
+				if(recv_count == *num)
+				{	
+					break;
+				}
+			}
 		}
-		
 	}
+	return NULL;
 }
 
 /* 
@@ -160,10 +169,10 @@ void* thread_fetch(int num, message_queue* mq, Map* map)
  */
  
 // 以raw规则处理收到的消息
-void process_raw_message(int socket_fd, char* request_buf)
+void process_raw_message(int socket_fd, int recv_size, char* message_buf)
 {
 	// 因为在scheduler中每个计算节点是用文件描述符表示的，所以收到数据后，使用文件描述符在map中可以定位这是第几个节点的任务，就可以放回相应的位置
-	enqueue(&mq, socket_fd, request_buf);
+	enqueue(&mq, socket_fd, recv_size, message_buf);
 	LOG_DEBUG("queue size: %d\n", mq.size);
 }
 
@@ -208,36 +217,38 @@ int distributed_manager_submit_task(const char* task_id, const char* command, co
 }
 
 // 从分布式管理机中撤销一个任务
-void distributed_manager_cancel_task(DM* dm, const char* task_id);
+void distributed_manager_cancel_task(const char* task_id);
 
 // 获取任务的执行状态
-int distributed_manager_get_task_status(DM* dm, const char* task_id);
+int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, Map* map)
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+	map_clean(&map);
 	for(int i = 0; i < num_usable; i++)
 	{
 		int ret = send_packet(nodes[i], RAW, task_id, sizeof(task_id), 0);
 		if(ret < 0)
 		{
-			
+			// LOG_DEBUG
 		}
 		char tmp[32];
 		sprintf(tmp, "%d", nodes[i]);
-		insert(map, tmp, i);
+		insert(&map, tmp, i); // map保存了节点编号（即连接时的fd）和执行顺序的pair，这样就可以知道每个节点执行的是第几部分任务
 	}
-	return;
-	
+	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&num_usable);
+	pthread_detach((pthread_t)(&pFetch));
+	return;	
 }
 
 // 设置负载均衡策略
-void distributed_manager_set_load_balancing_strategy(DM* dm, const char* strategy);
+void distributed_manager_set_load_balancing_strategy(const char* strategy);
 
 // 释放分布式管理机资源
-void distributed_manager_cleanup(DM* dm);
+void distributed_manager_cleanup();
 
 // logger_t logger;
 
@@ -247,29 +258,21 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
-	DM dm;
-	Map map;
 	init(&map);
-	// dm.m_log = get_logger();
-	distributed_manager_init(&dm);
-	log_init();
-	scheduler_init();
 	init_queue(&mq);
-	dm.m_cfg = ini_config_manager_create("config.ini");
-	if (dm.m_cfg == NULL) {
-    	//LOG_DEBUG(dm.m_log, "Error creating INI config manager.\n");
+	log_init();
+	rpc_init();
+	scheduler_init();
+	IniConfigManager* cfg = ini_config_manager_create("config.ini");
+	if (cfg == NULL) {
+    	LOG_DEBUG("创建配置文件失败：cfg == NULL.\n");
     	return -2;
     }
-     
-    if (ini_config_manager_read(dm.m_cfg) != 0) {
-     	//LOG_DEBUG(dm.m_log, "Error reading INI config file.\n");
- 	 	ini_config_manager_free(dm.m_cfg);
+    if (ini_config_manager_read(cfg) != 0) {
+     	LOG_DEBUG("读取配置文件失败.\n");
+ 	 	ini_config_manager_free(cfg);
  	 	return -2;
 	}
-	for (int i = 0; i < dm.m_cfg->num_items; i++) {
-	     //LOG_DEBUG(dm.m_log, "%s = %s\n", (char*)dm.m_cfg->items[i].key, (char*)dm.m_cfg->items[i].value);
-	}
-	
 	int ret = create_server(argv[1], atoi(argv[2]));
 	if(ret <= 0)
 	{
@@ -277,20 +280,21 @@ int main(int argc, char **argv) {
 		return -5;
 	}
     LOG_INFO("监听服务端创建完成.");
-	dm.socket_fd = ret;
-	rpc_init();
+	server_fd = ret;
+	
 	rpc_publish("join_cluster", rpc_join_cluster);
 	rpc_publish("exit_cluster", rpc_exit_cluster);
+	
 	pthread_t id1, id2;
-	pthread_create(&id1, NULL, (void*)thread_client, &dm);
+	pthread_create(&id1, NULL, (void*)thread_client, NULL);
 	pthread_create(&id2, NULL, (void*)thread_command, NULL);
     pthread_detach((pthread_t)(&id1));
+    pthread_detach((pthread_t)(&id2));
 	while(1)
 	{
 		LOG_INFO("程序运行中：等待接受命令或请求");
 		sleep(10);
 	}
-	//close(dm.socket_fd);
 	log_uninit();
 	return 0;
 }

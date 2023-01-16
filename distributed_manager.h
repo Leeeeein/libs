@@ -30,38 +30,29 @@ DM收到消息，用RPC提供的序列化反序列化机制处理，然后操纵
 #ifndef DISTRIBUTED_MANAGER_H
 #define DISTRIBUTED_MANAGER_H
 
-typedef struct distributed_manager
-{
-	IniConfigManager* m_cfg;	//manager配置文件管理器
-	int socket_fd;	//manager占用的文件描述符
-} DM;
-
 // 客户端消息处理线程
-void* thread_client(DM* dm);
+void* thread_client();
 
 // 接受输入的命令，方便调试
 void* thread_command();
 
 // 从消息队列中取结果数据的线程
-void* thread_fetch(int num, message_queue* mq, Map* map);
+void* thread_fetch(int* num);
 
 // 信息处理
-void message_process(int type, int fd, char* request_buf);
+void message_process(int type, int fd, int recv_size, char* request_buf);
 
 // 处理rpc消息的分支函数
 void process_rpc_message(int socket_fd, char* request_buf);
 
 // 处理raw消息的分支函数
-void process_raw_message(int socket_fd, char* request_buf);
+void process_raw_message(int socket_fd, int recv_size, char* request_buf);
 
 // 处理result消息的分支函数
 void process_res_message(int socket_fd, char* request_buf);
 
 // 订阅的rpc函数
 char* rpc_join_cluster();
-
-// 初始化分布式管理机
-int distributed_manager_init(DM* dm);
 
 // 向分布式管理机添加一个子节点
 int distributed_manager_add_node(int node_id);
@@ -73,18 +64,18 @@ int distributed_manager_remove_node(int node_id);
 int distributed_manager_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies);
 
 // 从分布式管理机中撤销一个任务
-void distributed_manager_cancel_task(DM* dm, const char* task_id);
+void distributed_manager_cancel_task(const char* task_id);
 
 // 获取任务的执行状态
-int distributed_manager_get_task_status(DM* dm, const char* task_id);
+int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, Map* map);
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes);
 
 // 设置负载均衡策略
-void distributed_manager_set_load_balancing_strategy(DM* dm, const char* strategy);
+void distributed_manager_set_load_balancing_strategy(const char* strategy);
 
 // 释放分布式管理机资源
-void distributed_manager_cleanup(DM* dm);
+void distributed_manager_cleanup();
 
 #endif

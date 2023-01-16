@@ -18,6 +18,7 @@ enum message_type{
 	UNDEFINE = -1,
 	RAW,
 	RPC,
+	LAUNCH,
 	RES,
 	COMMON,
 };

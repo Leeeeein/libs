@@ -64,7 +64,7 @@ int distributed_manager_remove_node(int node_id);
 int distributed_manager_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies);
 
 // 从分布式管理机中撤销一个任务
-void distributed_manager_cancel_task(const char* task_id);
+int distributed_manager_cancel_task(const char* task_id);
 
 // 获取任务的执行状态
 int distributed_manager_get_task_status(const char* task_id);

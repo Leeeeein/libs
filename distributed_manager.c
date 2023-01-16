@@ -144,19 +144,13 @@ void* thread_fetch(int* num)
 		if(mq.size != 0)
 		{
 			char tmp[2048];
-			if(-1 == dequeue(&mq, tmp)){
-				LOG_ERROR("dequeue error.");
-			}
-			else
-			{
-				recv_count += 1;
-				// 把tmp中的data拷贝到result_cache中来
-				memcpy(result_cache + size_recv, ((message*)tmp)->data, ((message*)tmp)->message_size);
-				size_recv += ((message*)tmp)->message_size;
-				if(recv_count == *num)
-				{	
-					break;
-				}
+			recv_count += 1;
+			// 把tmp中的data拷贝到result_cache中来
+			memcpy(result_cache + size_recv, ((message*)tmp)->data, ((message*)tmp)->message_size);
+			size_recv += ((message*)tmp)->message_size;
+			if(recv_count == *num)
+			{	
+				break;
 			}
 		}
 	}
@@ -217,7 +211,11 @@ int distributed_manager_submit_task(const char* task_id, const char* command, co
 }
 
 // 从分布式管理机中撤销一个任务
-void distributed_manager_cancel_task(const char* task_id);
+int distributed_manager_cancel_task(const char* task_id)
+{
+	int ret = scheduler_cancel_task(task_id);
+	return ret;
+}
 
 // 获取任务的执行状态
 int distributed_manager_get_task_status(const char* task_id);
@@ -230,7 +228,7 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 	map_clean(&map);
 	for(int i = 0; i < num_usable; i++)
 	{
-		int ret = send_packet(nodes[i], RAW, task_id, sizeof(task_id), 0);
+		int ret = send_packet(nodes[i], LAUNCH, task_id, sizeof(task_id), 0);
 		if(ret < 0)
 		{
 			// LOG_DEBUG
@@ -290,6 +288,8 @@ int main(int argc, char **argv) {
 	pthread_create(&id2, NULL, (void*)thread_command, NULL);
     pthread_detach((pthread_t)(&id1));
     pthread_detach((pthread_t)(&id2));
+    
+    distributed_manager_submit_task("12","12","3",1);
 	while(1)
 	{
 		LOG_INFO("程序运行中：等待接受命令或请求");

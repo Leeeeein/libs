@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-
+#include "log.h"
 #include "scheduler.h"
 
 scheduler* sche = NULL;
@@ -82,12 +82,13 @@ int scheduler_submit_task(const char* task_id, const char* command, const char* 
     new_task->status = 0;  // 0 means pending
     sche->tasks[sche->num_tasks] = new_task;
     sche->num_tasks++;
+    LOG_DEBUG("任务提交成功：[id=%s]",task_id);
     return 0;
 }
 
-void scheduler_cancel_task(scheduler* sche, const char* task_id) {
-    /*if (sche == NULL) {
-        return;  // sche not initialized
+int scheduler_cancel_task(const char* task_id) {
+    if (sche == NULL) {
+        return -1;  // sche not initialized
     }
 
     int found = 0;
@@ -105,8 +106,9 @@ void scheduler_cancel_task(scheduler* sche, const char* task_id) {
         }
     }
     if (!found) {
-        return;  // task not found
-    }*/
+        return -2;  // task not found
+    }
+    return 0;
 }
 
 int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status) {

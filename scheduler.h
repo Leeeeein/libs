@@ -51,7 +51,7 @@ int scheduler_remove_node(int node_id);
 int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies);
 
 // 从调度机中撤销一个任务
-void scheduler_cancel_task(scheduler* sche, const char* task_id);
+int scheduler_cancel_task(const char* task_id);
 
 // 获取任务的执行状态
 int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status);

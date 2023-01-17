@@ -70,7 +70,7 @@ int distributed_manager_cancel_task(const char* task_id);
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes);
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, FILE* file);
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(const char* strategy);

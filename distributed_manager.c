@@ -221,14 +221,25 @@ int distributed_manager_cancel_task(const char* task_id)
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes)
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, FILE* file)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+	
+	/*char buffer[1024];
+    int part_size = 0;
+    char *all_data=NULL;
+    while (fgets(buffer, 1024, file) != NULL) {
+        part_size++;
+        all_data = (char *)realloc(all_data, (part_size + 1) * 1024);
+        strcat(all_data, buffer);
+    }
+    rewind(file);*/
 	map_clean(&map);
 	for(int i = 0; i < num_usable; i++)
 	{
 		int ret = send_packet(nodes[i], LAUNCH, task_id, sizeof(task_id), 0);
+		//ret = send_packet(nodes[i], DATA, all_data+1024*(part_size/num_usable)*i,1024*(part_size/num_usable), 0);
 		if(ret < 0)
 		{
 			// LOG_DEBUG
@@ -237,6 +248,11 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 		sprintf(tmp, "%d", nodes[i]);
 		insert(&map, tmp, i); // map保存了节点编号（即连接时的fd）和执行顺序的pair，这样就可以知道每个节点执行的是第几部分任务
 	}
+	/*if(part_size%num_usable!=0){
+        int ret = send_packet(nodes[num_usable-1], DATA, all_data+1024*(part_size/num_usable)*num_usable,1024*(part_size%num_usable), 0);
+        LOG_DEBUG("发送数据包，[ret:%d]", ret);
+    }*/
+    // free(all_data);
 	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&num_usable);
 	pthread_detach((pthread_t)(&pFetch));
 	return;	
@@ -290,6 +306,8 @@ int main(int argc, char **argv) {
     pthread_detach((pthread_t)(&id2));
     
     distributed_manager_submit_task("12","12","3",1);
+    FILE* file = NULL;
+    distributed_manager_launch_specified_task("12", 3, file);
 	while(1)
 	{
 		LOG_INFO("程序运行中：等待接受命令或请求");

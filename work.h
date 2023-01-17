@@ -13,4 +13,7 @@ char* node_get_next_task();
 // 释放子节点资源
 void node_cleanup();
 
+// 接受命令
+void* thread_command();
+
 #endif

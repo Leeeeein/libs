@@ -1,7 +1,11 @@
 CC = gcc
 CFLAGS = -Wall -fPIC -lpthread
 
-all: c s  rpc_C disMana 
+all:disMana 
+
+
+LIB_PATH := $(PWD)
+LIB_FILE := $(LIB_PATH)
 
 #LOG: log.c $(wildcard *.so)
 #	$(CC) $(CFLAGS) -o LOG log.c $(wildcard *.so)
@@ -19,7 +23,7 @@ rpc_C: rpc_C.c $(wildcard *.so)
 	$(CC) $(CFLAGS) -o rpc_CS rpc_C.c network.c rpc.c $(wildcard *.so)
 	
 disMana: distributed_manager.c $(wildcard *.so)
-	$(CC) $(CFLAGS) -o disMana distributed_manager.c scheduler.c log.c network.c rpc.c config.c message_queue.c map.c $(wildcard *.so)
+	$(CC) $(CFLAGS) -o disMana network.c rpc.c config.c log.c message_queue.c map.c scheduler.c ./distributed_manager.c
 
 	
 %.so: %.c

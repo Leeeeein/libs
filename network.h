@@ -19,6 +19,8 @@ enum message_type{
 	RAW,
 	RPC,
 	LAUNCH,
+	TASK,
+	DATA,
 	RES,
 	COMMON,
 };

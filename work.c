@@ -115,7 +115,7 @@ int connect_manager()
 {
 	Node.id = ini_config_manager_get(cfg, "id");
 	Node.addr = ini_config_manager_get(cfg, "ip");
-	Node.port = atoi(ini_config_manager_get(cfg, port));
+	Node.port = atoi(ini_config_manager_get(cfg, "port"));
 	Node.socket = create_client(Node.addr, Node.port);	
 }
 

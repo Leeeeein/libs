@@ -96,7 +96,6 @@ const char *ini_config_manager_get(IniConfigManager *manager, const char *key) {
     if (strcmp(manager->items[i].key, key) == 0) {
       return manager->items[i].value;
     }
-    printf("key:%s, query:%s\n", manager->items[i].key, key);
   }
   return NULL;
 }

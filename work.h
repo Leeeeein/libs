@@ -1,6 +1,7 @@
 #ifndef DISTRIBUTED_NODE_H
 #define DISTRIBUTED_NODE_H
 
+void work_init();
 // 初始化子节点
 void node_init(const char* node_id, const char* scheduler_hostname, int scheduler_port);
 
@@ -15,5 +16,9 @@ void node_cleanup();
 
 // 接受命令
 void* thread_command();
+
+void* thread_ipc();
+
+void connect_manager();
 
 #endif

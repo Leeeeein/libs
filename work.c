@@ -1,7 +1,9 @@
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <stdio.h>
 
-#include "node.h"
+#include "work.h"
 #include "network.h"
 #include "config.h"
 #include "log.h"
@@ -15,19 +17,31 @@ struct node {
 };
 
 static struct node Node;
-static IniConfigManager* cfg = ini_config_manager_create("cfg_node.ini");
-static message_queue taskQueue;
-static char taskList[atoi(ini_config_manager_get(cfg, "max_task_num"))][atoi(ini_config_manager_get(cfg, "max_task_id_length"))];
+static IniConfigManager* cfg;
+static message_queue* taskQueue;
+static char** taskList;
+
+void work_init()
+{
+	cfg = ini_config_manager_create("cfg_node.ini");
+	ini_config_manager_read(cfg);
+	taskList = (char **)malloc(atoi(ini_config_manager_get(cfg, "max_task_num")) * sizeof(char *));
+    // 为每个字符串分配内存
+    for (int i = 0; i < atoi(ini_config_manager_get(cfg, "max_task_num")); i++) {
+        taskList[i] = (char *)malloc((atoi(ini_config_manager_get(cfg, "max_task_id_length"))+ 1) * sizeof(char));
+    }
+}
 
 void* thread_command()
 {
 	char buf[64];
 	while(1)
 	{
+		printf("a\n");
 		scanf("%s", buf);
 		size_t l = sizeof(buf);
 		buf[l-1] = buf[l];
-		LOG_INPUT("\033[31m%s\033[0m", buf);
+		LOG_INPUT("\033[33m%s\033[0m", buf);
 		if(0 == strcmp(buf, "EXIT"))
 		{
 			return NULL;
@@ -43,15 +57,17 @@ void* thread_ipc()
 	char taskId[64];
 	char recvBuf[buffSz];
 	message curMessage;
-	init_queue(&taskQueue);
+	taskQueue = (message_queue*)malloc(sizeof(message_queue));
+	init_queue(taskQueue);
 	while(1)
 	{
-		int recvSize = recv_packet(Node.socket, messType, recvBuf, buffSz, 0);
+		int recvSize = recv_packet(Node.socket, &messType, recvBuf, buffSz, 0);
+		printf("recvsize: %d\n", recvSize);
 		switch(messType)
 		{
 			case TASK:
 			{
-				memncpy(taskId, recvBuf, recvSize);
+				memcpy(taskId, recvBuf, recvSize);
 				for(int i = 0; i < atoi(ini_config_manager_get(cfg, "max_task_num")); i++)
 				{
 					if(0 == strcmp(taskId, taskList[i]))
@@ -65,15 +81,15 @@ void* thread_ipc()
 			{
 				curMessage.next = NULL;
 				curMessage.message_size = recvSize;
-				memncpy(curMessage.data, recvBuf, recvSize);
-				pthread_mutex_lock(&queue->lock);
+				memcpy(curMessage.data, recvBuf, recvSize);
+				pthread_mutex_lock(&(taskQueue->lock));
 				
 				if (taskQueue->tail == NULL) {
-					taskQueue->head = curMessage;
-					taskQueue->tail = curMessage;
+					taskQueue->head = &curMessage;
+					taskQueue->tail = &curMessage;
 				} else {
-					taskQueue->tail->next = curMessage;
-					taskQueue->tail = curMessage;
+					taskQueue->tail->next = &curMessage;
+					taskQueue->tail = &curMessage;
 					
 				}
 				++taskQueue->size;
@@ -81,9 +97,9 @@ void* thread_ipc()
 			}
 			case LAUNCH:
 			{
-				memncpy(taskId, recvBuf, recvSize);
+				memcpy(taskId, recvBuf, recvSize);
 				char dataToComp[4096];
-				dequeue(&taskQueue, dataToComp);
+				dequeue(taskQueue, dataToComp);
 				if(0 == strcmp(taskId, "LinearRegression"))
 				{
 					//int resSize = LinearRegression(dataToComp);
@@ -109,13 +125,15 @@ void* thread_ipc()
 			}
 		}
 	}
+	
 }
 
-int connect_manager()
+void connect_manager()
 {
-	Node.id = ini_config_manager_get(cfg, "id");
-	Node.addr = ini_config_manager_get(cfg, "ip");
+	strcpy(Node.id, ini_config_manager_get(cfg, "id"));
+	strcpy(Node.address, ini_config_manager_get(cfg, "ip"));
 	Node.port = atoi(ini_config_manager_get(cfg, "port"));
-	Node.socket = create_client(Node.addr, Node.port);	
+	Node.socket = create_client(Node.address, Node.port);
+	printf("id: %s, ip: %s, port: %d, socket: %d \n", Node.id, Node.address, Node.port, Node.socket);	
 }
 

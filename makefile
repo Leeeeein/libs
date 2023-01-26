@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -fPIC -lpthread
 
-all:disMana 
+all:disMana ptest
 
 
 LIB_PATH := $(PWD)
@@ -24,6 +24,9 @@ rpc_C: rpc_C.c $(wildcard *.so)
 	
 disMana: distributed_manager.c $(wildcard *.so)
 	$(CC) $(CFLAGS) -o disMana network.c rpc.c config.c log.c message_queue.c map.c scheduler.c ./distributed_manager.c
+
+ptest: ptest.c $(wildcard *.so)
+	$(CC) $(CFLAGS) -o ptest config.c network.c log.c message_queue.c work.c ./ptest.c
 
 	
 %.so: %.c

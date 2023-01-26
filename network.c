@@ -64,7 +64,7 @@ int create_client(const char *ip, int port) {
     // create socket
     sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0) {
-        perror("socket");
+        perror("socket:");
         return -1;
     }
 

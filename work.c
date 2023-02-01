@@ -30,6 +30,8 @@ void work_init()
     for (int i = 0; i < atoi(ini_config_manager_get(cfg, "max_task_num")); i++) {
         taskList[i] = (char *)malloc((atoi(ini_config_manager_get(cfg, "max_task_id_length"))+ 1) * sizeof(char));
     }
+    printf("_________________________ %s __________________________\n", ini_config_manager_get(cfg, "max_task_id_length"));
+    printf("_________________________ %s __________________________\n", ini_config_manager_get(cfg, "max_task_num"));
 }
 
 void* thread_command()

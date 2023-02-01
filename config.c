@@ -71,6 +71,27 @@ int ini_config_manager_read(IniConfigManager *manager) {
     *equals = '\0';
     char *key = line;
     char *value = equals + 1;
+    int lenKey = strlen(key);
+    int lenVal = strlen(value);
+    int i, j, k, l;
+    for(i = 0; i < lenKey && key[i] == ' '; i++){}
+	for(j = 0; j < lenVal && value[j] == ' '; j++){}
+	for(k = lenKey-1; k >= i && key[k] == ' '; k--){}
+	for(l = lenVal-1; l >= j && value[l] == ' '; l--){}
+	key += i;
+	key[k-i+1] = '\0';
+	value += j;
+	value[l-j+1] = '\0';
+	if(key[strlen(key)-1] == '\"')
+		key[strlen(key)-1] = '\0';
+	if(key[0] == '"')
+		key += 1;
+		
+	if(value[strlen(value)-1] == '\"')
+		value[strlen(value)-1] = '\0';
+	if(value[0] == '"')
+		value += 1;
+	
 
     // 添加到配置项数组中
     manager->items = realloc(manager->items, sizeof(IniConfig) * (manager->num_items + 1));

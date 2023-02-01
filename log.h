@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <pthread.h>
 #ifndef LOG_H
 #define LOG_H
 

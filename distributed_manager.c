@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
+#include <string.h>
+#include <math.h>
 
 #include "map.h"
 #include "distributed_manager.h"
@@ -10,13 +12,23 @@ static message_queue mq;
 static pthread_t pFetch;
 static Map map;
 static int server_fd;
-static char result_cache[4096];
+// static char g_result_cache[4096];
+static CallbackFunc callback;
+
+/* 
+ *  Section : 管理回调函数
+ *  Purpose: 
+ */
+void bindCallback(CallbackFunc func) {
+    callback = func;
+}
+
 
 /* 
  *  Section : 服务函数
  *  Purpose: 集中定义rpc的服务端服务函数
  */
- 
+
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
@@ -136,7 +148,7 @@ void* thread_client()
 	return NULL;	
 }
 
-void* thread_fetch(int* num)
+void* thread_fetch(thread_fetch_paras* args)//int* num, char* result_cache, HMM_PHASES* enumStatus)
 {
 	int recv_count = 0;
 	int size_recv = 0;
@@ -144,12 +156,15 @@ void* thread_fetch(int* num)
 		if(mq.size != 0)
 		{
 			char tmp[2048];
+			dequeue(&mq, tmp);
 			recv_count += 1;
-			// 把tmp中的data拷贝到result_cache中来
-			memcpy(result_cache + size_recv, ((message*)tmp)->data, ((message*)tmp)->message_size);
+			// 把tmp中的data拷贝到result_cache中来,
+			// 这个地方还有一个处理，根据节点的编号把结果放在相应的位置，而不是直接从前往后放
+			memcpy((char*)args->result_cache + size_recv, ((message*)tmp)->data, ((message*)tmp)->message_size);
 			size_recv += ((message*)tmp)->message_size;
-			if(recv_count == *num)
+			if(recv_count == args->num_nodes)
 			{	
+				args->enumStatus += 1;
 				break;
 			}
 		}
@@ -221,25 +236,19 @@ int distributed_manager_cancel_task(const char* task_id)
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, FILE* file)
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char** file, char** result, HMM_PHASES enumStatus, TASK_DESCRIPTION* desc)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
-	
-	/*char buffer[1024];
-    int part_size = 0;
-    char *all_data=NULL;
-    while (fgets(buffer, 1024, file) != NULL) {
-        part_size++;
-        all_data = (char *)realloc(all_data, (part_size + 1) * 1024);
-        strcat(all_data, buffer);
-    }
-    rewind(file);*/
 	map_clean(&map);
+	int part_items_num = desc->data_items_num / num_usable;
 	for(int i = 0; i < num_usable; i++)
 	{
 		int ret = send_packet(nodes[i], LAUNCH, task_id, sizeof(task_id), 0);
-		//ret = send_packet(nodes[i], DATA, all_data+1024*(part_size/num_usable)*i,1024*(part_size/num_usable), 0);
+		if(i != num_usable-1)
+			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], part_items_num*desc->single_item_length, 0);
+		else
+			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, 0);
 		if(ret < 0)
 		{
 			// LOG_DEBUG
@@ -253,7 +262,8 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
         LOG_DEBUG("发送数据包，[ret:%d]", ret);
     }*/
     // free(all_data);
-	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&num_usable);
+    thread_fetch_paras args = {num_usable, result, &enumStatus};
+	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&args);
 	pthread_detach((pthread_t)(&pFetch));
 	return;	
 }
@@ -266,12 +276,15 @@ void distributed_manager_cleanup();
 
 // logger_t logger;
 
-int main(int argc, char **argv) {
+
+/*int main(int argc, char **argv) {
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s <IP address> <port>\n", argv[0]);
 		return 1;
 	}
-	
+	*/
+int launch_server(char** argv)
+{
 	init(&map);
 	init_queue(&mq);
 	log_init();
@@ -306,8 +319,8 @@ int main(int argc, char **argv) {
     pthread_detach((pthread_t)(&id2));
     
     distributed_manager_submit_task("12","12","3",1);
-    FILE* file = NULL;
-    distributed_manager_launch_specified_task("12", 3, file);
+    // FILE* file = NULL;
+    // distributed_manager_launch_specified_task("12", 3, file);
 	while(1)
 	{
 		LOG_INFO("程序运行中：等待接受命令或请求");

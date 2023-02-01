@@ -27,8 +27,22 @@ DM收到消息，用RPC提供的序列化反序列化机制处理，然后操纵
 #include "scheduler.h"
 #include "config.h"
 #include "message_queue.h"
+#include "common_defs.h"
+
 #ifndef DISTRIBUTED_MANAGER_H
 #define DISTRIBUTED_MANAGER_H
+
+typedef void (*CallbackFunc)(int);
+typedef struct 
+{
+	int num_nodes;
+	char** result_cache;
+	HMM_PHASES* enumStatus;
+	
+} thread_fetch_paras;
+
+// 绑定消息通知回调
+void bindCallback(CallbackFunc func);
 
 // 客户端消息处理线程
 void* thread_client();
@@ -37,7 +51,7 @@ void* thread_client();
 void* thread_command();
 
 // 从消息队列中取结果数据的线程
-void* thread_fetch(int* num);
+void* thread_fetch(thread_fetch_paras* args);
 
 // 信息处理
 void message_process(int type, int fd, int recv_size, char* request_buf);
@@ -70,7 +84,7 @@ int distributed_manager_cancel_task(const char* task_id);
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, FILE* file);
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char** file, char** result, HMM_PHASES enumStatus, TASK_DESCRIPTION* desc);
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(const char* strategy);
@@ -78,4 +92,6 @@ void distributed_manager_set_load_balancing_strategy(const char* strategy);
 // 释放分布式管理机资源
 void distributed_manager_cleanup();
 
+// manager作为模块启动
+int launch_server(char** argv);
 #endif

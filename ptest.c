@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include "work.h"
+#include "log.h"
+#include <unistd.h>
 #include <pthread.h>
 
 int main() {

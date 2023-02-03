@@ -1,59 +1,17 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
-
+#include <stdio.h>
+#include <string.h>
 #include "distributed_manager.h"
 #include "common_defs.h"
 
-void write_to_file(const char *array, const char *filePath, int phase)
+void fit(HMM_ARGS* args)
 {
-    FILE *file;
-    file = fopen(file_path, "w");
-    if (file == NULL)
-    {
-        printf("Error opening file!\n");
-        return;
-    }
-    fwrite(array, sizeof(char), sizeof(array), file);
-    fclose(file);
-}
-
-void write_to_file_with_phase(const char *array, const char *file_path, int phase)
-{
-    char file_name[100];
-    sprintf(file_name, "%sphase%d.txt", file_path, phase);
-    FILE *file;
-    file = fopen(file_name, "w");
-    if (file == NULL)
-    {
-        printf("Error opening file!\n");
-        return;
-    }
-    fwrite(array, sizeof(char), strlen(array), file);
-    fclose(file);
-}
-
-void swap_pointers(char **data, char **result)
-{
-    char *temp = *data;
-    *data = *result;
-    *result = temp;
-}
-
-void get_task_description(char** dataBuf, int* items_num, int* item_length)
-{
-    *items_num = 0;
-    while (dataBuf[*items_num]) {
-        *item_length = max(*item_length, (int)strlen(dataBuf[*items_num]));
-        (*items_num)++;
-    }
-}
-
-int fit(HmmModel* model, char** dataBuf, char** resultBuf, const char* filePath)
-{
+	int items_num, item_length;
+	char* dataBuf = (char*)malloc(1024*1024);
+	file_to_str(dataBuf, args->filePath, &items_num, &item_length);
 	HMM_PHASES enumStatus = BEGIN;
-	int items_num = 0, item_length = 0;
-	get_task_description(dataBuf, &items_num, &item_length);
 	TASK_DESCRIPTION desc;
 	desc.data_items_num = items_num;
 	desc.single_item_length = item_length;
@@ -63,48 +21,48 @@ int fit(HmmModel* model, char** dataBuf, char** resultBuf, const char* filePath)
 		{
 			case BEGIN:
 			{
-				distributed_manager_launch_specified_task("hmm_1", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				distributed_manager_launch_specified_task("hmm_1", 3, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE1_COMPLETE:
 			{
-				write_to_file_with_phase(resultBuf, filePath, 1);
-				swap_pointers(&dataBuf, &resultBuf);
-				distributed_manager_launch_specified_task("hmm_2", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 1);
+				swap_pointers(&dataBuf, &(args->resultBuf));
+				distributed_manager_launch_specified_task("hmm_2", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE2_COMPLETE:
 			{
-				write_to_file_with_phase(resultBuf, filePath, 2);
-				swap_pointers(&dataBuf, &resultBuf);
-				distributed_manager_launch_specified_task("hmm_3", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 2);
+				swap_pointers(&dataBuf, &(args->resultBuf));
+				distributed_manager_launch_specified_task("hmm_3", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE3_COMPLETE:
 			{
-				write_to_file_with_phase(resultBuf, filePath, 3);
-				swap_pointers(&dataBuf, &resultBuf);
-				distributed_manager_launch_specified_task("hmm_4", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 3);
+				swap_pointers(&dataBuf, &(args->resultBuf));
+				distributed_manager_launch_specified_task("hmm_4", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE4_COMPLETE:
 			{
-				write_to_file_with_phase(resultBuf, filePath, 4);
-				swap_pointers(&dataBuf, &resultBuf);
-				distributed_manager_launch_specified_task("hmm_5", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 4);
+				swap_pointers(&dataBuf, &(args->resultBuf));
+				distributed_manager_launch_specified_task("hmm_5", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE5_COMPLETE:
 			{
-				write_to_file_with_phase(resultBuf, filePath, 5);
-				swap_pointers(&dataBuf, &resultBuf);
-				distributed_manager_launch_specified_task("hmm_6", model.max_nodes_num, dataBuf, resultBuf, enumStatus, &desc);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 5);
+				swap_pointers(&dataBuf, &(args->resultBuf));
+				distributed_manager_launch_specified_task("hmm_6", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc);
 				break;
 			}
 			case PHASE6_COMPLETE:
 			{
 				// 在这个地方， resultBuf收到的就是最终的计算结果
-				write_to_file_with_phase(resultBuf, filePath, 6);
+				write_to_file_with_phase(args->resultBuf, args->filePath, 6);
 				enumStatus = COMPLETE;
 				break;
 			}
@@ -116,6 +74,7 @@ int fit(HmmModel* model, char** dataBuf, char** resultBuf, const char* filePath)
 		if(enumStatus == COMPLETE)
 			break;
 	}
+	return;
 }
 
 
@@ -125,6 +84,23 @@ int main(int argc, char** argv)
 		fprintf(stderr, "Usage: %s <IP address> <port>\n", argv[0]);
 		return 1;
 	}
+	HmmModel model = {1, NULL, NULL, 0, 0};
+	HMM_ARGS args;
+	char result[1024*1024];
 	launch_server(argv);
+	args.model = &model;
+	strcpy(args.filePath, "/home/liyinzhe/Workspace/FolderForLibs/inc/data.txt");
+	args.resultBuf = result;
+	strcpy(args.resultPath, "/home/liyinzhe/Workspace/FolderForLibs/inc");
+	
+	pthread_t pid;
+	pthread_create(&pid, NULL, (void*)fit, (void*)&args);
+	pthread_detach((pthread_t)(&pid));
+	while(1)
+	{
+		printf("程序运行中：等待接受命令或请求\n");
+		sleep(10);
+	}
+	log_uninit();
 	return 0;
 }

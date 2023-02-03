@@ -12,17 +12,6 @@ static message_queue mq;
 static pthread_t pFetch;
 static Map map;
 static int server_fd;
-// static char g_result_cache[4096];
-static CallbackFunc callback;
-
-/* 
- *  Section : 管理回调函数
- *  Purpose: 
- */
-void bindCallback(CallbackFunc func) {
-    callback = func;
-}
-
 
 /* 
  *  Section : 服务函数
@@ -46,7 +35,6 @@ char* rpc_exit_cluster(const char* params) {
 	sprintf(result, "%d", ret);
 	return result;
 }
-
 
 /* 
  *  Section : 线程函数
@@ -122,7 +110,8 @@ void* thread_client()
 		if (ret <= 0) {
 			break;
 		}
-		if(FD_ISSET(sockfd, &read_fds) && -1 == create_connect(sockfd, &fds, &max_fd)){
+		int client_fd = create_connect(sockfd, &fds, &max_fd);
+		if(FD_ISSET(sockfd, &read_fds) && -1 == client_fd){
 			continue;
 		}
 		for (int fd = 0; fd <= max_fd; ++fd) {
@@ -236,10 +225,15 @@ int distributed_manager_cancel_task(const char* task_id)
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char** file, char** result, HMM_PHASES enumStatus, TASK_DESCRIPTION* desc)
+void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+	if(num_usable <= 0)
+	{
+		//printf("usable nodes are not exist.\n");
+		return;
+	}
 	map_clean(&map);
 	int part_items_num = desc->data_items_num / num_usable;
 	for(int i = 0; i < num_usable; i++)
@@ -257,12 +251,7 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 		sprintf(tmp, "%d", nodes[i]);
 		insert(&map, tmp, i); // map保存了节点编号（即连接时的fd）和执行顺序的pair，这样就可以知道每个节点执行的是第几部分任务
 	}
-	/*if(part_size%num_usable!=0){
-        int ret = send_packet(nodes[num_usable-1], DATA, all_data+1024*(part_size/num_usable)*num_usable,1024*(part_size%num_usable), 0);
-        LOG_DEBUG("发送数据包，[ret:%d]", ret);
-    }*/
-    // free(all_data);
-    thread_fetch_paras args = {num_usable, result, &enumStatus};
+    thread_fetch_paras args = {num_usable, result, enumStatus};
 	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&args);
 	pthread_detach((pthread_t)(&pFetch));
 	return;	
@@ -283,7 +272,7 @@ void distributed_manager_cleanup();
 		return 1;
 	}
 	*/
-int launch_server(char** argv)
+void launch_server(char** argv)
 {
 	init(&map);
 	init_queue(&mq);
@@ -293,18 +282,18 @@ int launch_server(char** argv)
 	IniConfigManager* cfg = ini_config_manager_create("config.ini");
 	if (cfg == NULL) {
     	LOG_DEBUG("创建配置文件失败：cfg == NULL.\n");
-    	return -2;
+    	return;
     }
     if (ini_config_manager_read(cfg) != 0) {
      	LOG_DEBUG("读取配置文件失败.\n");
  	 	ini_config_manager_free(cfg);
- 	 	return -2;
+ 	 	return;
 	}
 	int ret = create_server(argv[1], atoi(argv[2]));
 	if(ret <= 0)
 	{
 		//LOG_ERROR(dm.m_log, "监听服务端创建失败. ret:[%d]", ret);
-		return -5;
+		return;
 	}
     LOG_INFO("监听服务端创建完成.");
 	server_fd = ret;
@@ -317,17 +306,6 @@ int launch_server(char** argv)
 	pthread_create(&id2, NULL, (void*)thread_command, NULL);
     pthread_detach((pthread_t)(&id1));
     pthread_detach((pthread_t)(&id2));
-    
-    distributed_manager_submit_task("12","12","3",1);
-    // FILE* file = NULL;
-    // distributed_manager_launch_specified_task("12", 3, file);
-	while(1)
-	{
-		LOG_INFO("程序运行中：等待接受命令或请求");
-		sleep(10);
-	}
-	log_uninit();
-	return 0;
 }
 
 

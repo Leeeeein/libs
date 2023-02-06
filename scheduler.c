@@ -138,10 +138,14 @@ int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {
 	for(int i = 0; i < num_nodes; i++)
 	{
 		if(occu_cnt == max_nodes_num)
+		{
 			break;
+		}
 		node* cur_node = sche->nodes[i];
 		if(1 == cur_node->status)
+		{
 			continue;
+		}
 		nodes_fd[idx] = cur_node->fd;
 		cur_node->status = 1;
 		++idx;

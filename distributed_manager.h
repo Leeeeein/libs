@@ -68,6 +68,7 @@ void process_res_message(int socket_fd, char* request_buf);
 // 订阅的rpc函数
 char* rpc_join_cluster();
 
+scheduler* distributed_manager_get_scheduler();
 // 向分布式管理机添加一个子节点
 int distributed_manager_add_node(int node_id);
 
@@ -84,7 +85,7 @@ int distributed_manager_cancel_task(const char* task_id);
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc);
+int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc);
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(const char* strategy);

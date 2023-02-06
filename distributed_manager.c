@@ -24,6 +24,7 @@ char* rpc_join_cluster(const char* params) {
 	int ret = distributed_manager_add_node(cfd);
 	static char result[16];
 	sprintf(result, "%d", ret);
+	printf("qqa  %s\n", result);
 	return result;
 }
 
@@ -33,6 +34,7 @@ char* rpc_exit_cluster(const char* params) {
 	int ret = distributed_manager_remove_node(cfd);
 	static char result[16];
 	sprintf(result, "%d", ret);
+	printf("qqb  %s\n", result);
 	return result;
 }
 
@@ -40,25 +42,7 @@ char* rpc_exit_cluster(const char* params) {
  *  Section : 线程函数
  *  Purpose: 集中定义文件中的线程函数
  */
-void* thread_command()
-{
-	char buf[64];
-	while(1)
-	{
-		scanf("%s", buf);
-		size_t l = sizeof(buf);
-		buf[l-1] = buf[l];
-		LOG_INPUT("\033[31m%s\033[0m", buf);
-		if(0 == strcmp(buf, "NumOfNodes"))
-		{
-			LOG_INFO("%d", get_scheduler()->num_nodes);
-		}
-		else
-		{
-			LOG_WARNING("\033[35m 输入的命令不存在：%s \n 当前可以使用的命令有：\n NumOfNodes（查看计算节点数量）\033[0m", buf)
-		}
-	}
-}
+
 
 void message_process(int type, int fd, int recv_size, char* request_buf)
 {
@@ -110,8 +94,7 @@ void* thread_client()
 		if (ret <= 0) {
 			break;
 		}
-		int client_fd = create_connect(sockfd, &fds, &max_fd);
-		if(FD_ISSET(sockfd, &read_fds) && -1 == client_fd){
+		if(FD_ISSET(sockfd, &read_fds) && -1 == create_connect(sockfd, &fds, &max_fd)){
 			continue;
 		}
 		for (int fd = 0; fd <= max_fd; ++fd) {
@@ -193,6 +176,10 @@ void process_res_message(int socket_fd, char* request_buf)
 	
 }
 
+scheduler* distributed_manager_get_scheduler()
+{
+	return get_scheduler();
+}
 // 向分布式管理机添加一个子节点
 int distributed_manager_add_node(int node_id)
 {
@@ -225,14 +212,14 @@ int distributed_manager_cancel_task(const char* task_id)
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-void distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
+int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
 {
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
 	if(num_usable <= 0)
 	{
-		//printf("usable nodes are not exist.\n");
-		return;
+		// printf("usable nodes are not exist.\n");
+		return -1;
 	}
 	map_clean(&map);
 	int part_items_num = desc->data_items_num / num_usable;
@@ -245,7 +232,7 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
 			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, 0);
 		if(ret < 0)
 		{
-			// LOG_DEBUG
+			return -1;
 		}
 		char tmp[32];
 		sprintf(tmp, "%d", nodes[i]);
@@ -254,7 +241,7 @@ void distributed_manager_launch_specified_task(const char* task_id, int max_node
     thread_fetch_paras args = {num_usable, result, enumStatus};
 	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&args);
 	pthread_detach((pthread_t)(&pFetch));
-	return;	
+	return 0;	
 }
 
 // 设置负载均衡策略
@@ -270,10 +257,14 @@ void distributed_manager_cleanup();
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s <IP address> <port>\n", argv[0]);
 		return 1;
-	}
-	*/
+	}*/
+	
 void launch_server(char** argv)
 {
+	// pthread_t id1;
+	// pthread_create(&id1, NULL, (void*)thread_client, NULL);
+    // pthread_detach((pthread_t)(&id1));
+    
 	init(&map);
 	init_queue(&mq);
 	log_init();
@@ -301,11 +292,6 @@ void launch_server(char** argv)
 	rpc_publish("join_cluster", rpc_join_cluster);
 	rpc_publish("exit_cluster", rpc_exit_cluster);
 	
-	pthread_t id1, id2;
-	pthread_create(&id1, NULL, (void*)thread_client, NULL);
-	pthread_create(&id2, NULL, (void*)thread_command, NULL);
-    pthread_detach((pthread_t)(&id1));
-    pthread_detach((pthread_t)(&id2));
 }
 
 

@@ -162,7 +162,7 @@ void process_rpc_message(int socket_fd, char* request_buf)
 
 void process_res_message(int socket_fd, char* request_buf)
 {
-	printf("%s", request_buf);
+	LOG_DEBUG("\n%s\n\n", request_buf);
 }
 
 scheduler* distributed_manager_get_scheduler()
@@ -211,9 +211,9 @@ int distributed_manager_launch_specified_task(const char* task_id, int max_nodes
 	{
 		int ret = send_packet(nodes[i], LAUNCH, task_id, sizeof(task_id), 0);
 		if(i != num_usable-1)
-			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], part_items_num*desc->single_item_length, 0);
+			ret = send_packet(nodes[i], DATA, &file[i*part_items_num*desc->single_item_length], part_items_num*desc->single_item_length, 0);
 		else
-			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, 0);
+			ret = send_packet(nodes[i], DATA, &file[i*part_items_num*desc->single_item_length], desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, 0);
 		printf("items_num: %d, num_usable: %d, single_item_length: %d, big_ass: %d, ret: %d\n",\
 		 desc->data_items_num, num_usable, desc->single_item_length,\
 		 desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, ret);

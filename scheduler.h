@@ -26,8 +26,6 @@ typedef struct task {
 typedef struct scheduler {
     int num_nodes;
     struct node* nodes[MAX_NODES];
-    int num_tasks;
-    struct task* tasks[MAX_TASKS];
 } scheduler;
 
 enum strategy

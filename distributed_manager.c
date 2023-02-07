@@ -13,10 +13,6 @@ static pthread_t pFetch;
 static Map map;
 static int server_fd;
 
-/* 
- *  Section : 服务函数
- *  Purpose: 集中定义rpc的服务端服务函数
- */
 
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
@@ -85,7 +81,7 @@ void* thread_client()
 	int max_fd = sockfd;
 	fd_set fds;
 	FD_SET(sockfd, &fds);
-	char request_buf[1024];
+	char request_buf[1024*1024];
 	while (1) {
 		fd_set read_fds = fds;
 		int ret = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
@@ -100,8 +96,6 @@ void* thread_client()
 				// 从客户端接收请求
 				int type = 0;
 				ret = recv_packet(fd, &type, request_buf, sizeof(request_buf), 0);
-				sprintf(request_buf + strlen(request_buf), "socket[%d].", fd);
-				LOG_INFO("recv ret: %d, message type: %d\n", ret, type);
 				if(ret <= 0)
 				{
 				   close(fd);
@@ -147,7 +141,6 @@ void* thread_fetch(thread_fetch_paras* args)//int* num, char* result_cache, HMM_
  *  Purpose: 对收到的数据包根据类别进行处理
  */
  
-// 以raw规则处理收到的消息
 void process_raw_message(int socket_fd, int recv_size, char* message_buf)
 {
 	// 因为在scheduler中每个计算节点是用文件描述符表示的，所以收到数据后，使用文件描述符在map中可以定位这是第几个节点的任务，就可以放回相应的位置
@@ -155,61 +148,54 @@ void process_raw_message(int socket_fd, int recv_size, char* message_buf)
 	LOG_DEBUG("queue size: %d\n", mq.size);
 }
 
-// 以rpc规则处理收到的消息
 void process_rpc_message(int socket_fd, char* request_buf)
 {
 	int ret = 0;
+	sprintf(request_buf+strlen(request_buf), "socket[%d].", socket_fd);
 	printf("get request line : %s\n", request_buf);
 	rpc_request_t* request = rpc_deserialize_request(request_buf);
 	printf("method name: |%s|, method parameters: |%s|\n", request->method, request->params);
 	rpc_response_t* response = rpc_execute_request(socket_fd, request);
 	char* response_str = rpc_serialize_response(response);
-	printf("response string: |%s| \n", response_str);
 	ret = send_packet(socket_fd, RAW, response_str, sizeof(response_str), 0);
-	printf("send finish. length:[%d]\n", ret);
 }
 
 void process_res_message(int socket_fd, char* request_buf)
 {
-	
+	printf("%s", request_buf);
 }
 
 scheduler* distributed_manager_get_scheduler()
 {
 	return get_scheduler();
 }
-// 向分布式管理机添加一个子节点
+
 int distributed_manager_add_node(int node_id)
 {
 	int ret = scheduler_add_node(node_id);
 	return ret;
 }
 
-// 从分布式管理机中移除一个子节点
 int distributed_manager_remove_node(int node_id)
 {
 	int ret = scheduler_remove_node(node_id);
 	return ret;
 }
 
-// 向分布式管理机提交一个任务
 int distributed_manager_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies)
 {
 	int ret = scheduler_submit_task(task_id, command, dependencies, num_dependencies);
 	return ret;
 }
 
-// 从分布式管理机中撤销一个任务
 int distributed_manager_cancel_task(const char* task_id)
 {
 	int ret = scheduler_cancel_task(task_id);
 	return ret;
 }
 
-// 获取任务的执行状态
 int distributed_manager_get_task_status(const char* task_id);
 
-// 启动指定编号的任务
 int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
 {
 	int nodes[max_nodes];
@@ -245,10 +231,8 @@ int distributed_manager_launch_specified_task(const char* task_id, int max_nodes
 	return 0;	
 }
 
-// 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(const char* strategy);
 
-// 释放分布式管理机资源
 void distributed_manager_cleanup();
 
 // logger_t logger;

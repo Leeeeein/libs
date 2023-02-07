@@ -99,11 +99,17 @@ rpc_request_t* rpc_deserialize_request(const char* request_str) {
 	end = strstr(request_str, "}.");
 	len = end - start - 8;  // 8是"params:{"的长度
 	
+	
 	request->params = (char*)malloc(len + s_len + 1 + 1);  // 例如params:{1,2}.socket[11].   生成参数字符串“1,2,11”    len对应着“1,2”,s_len对应着“11”，1对应着“\0”, 第二个1对应着“,”
 	strncpy(request->params, start + 8, len);
 	strcat(request->params, ",");
 	strncpy(request->params + len + 1, s_start + 7 , s_len);
 	request->params[len + s_len + 1] = '\0';
+	
+	
+	/*request->params = (char*)malloc(len + 1);
+	strncpy(request->params, start + 8, len);
+	request->params[len + 1] = '\0';*/
 	
 	printf("request's method: %s, request's params: %s\n", request->method, request->params);
 

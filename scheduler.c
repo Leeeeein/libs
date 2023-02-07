@@ -3,7 +3,7 @@
 #include "log.h"
 #include "scheduler.h"
 
-scheduler* sche = NULL;
+static scheduler* sche = NULL;
 
 scheduler* get_scheduler()
 {
@@ -14,11 +14,8 @@ int scheduler_init() {
     if (sche != NULL) {
         return -1;  // already initialized
     }
-    
     sche = malloc(sizeof(scheduler));
     sche->num_nodes = 0;
-    sche->num_tasks = 0;
-
     return 0;
 }
 
@@ -29,7 +26,6 @@ int scheduler_add_node(int node_id) {
     if (sche->num_nodes == MAX_NODES) {
         return -2;  // too many nodes
     }
-
     node* new_node = malloc(sizeof(node));
     new_node->fd = node_id;
     new_node->status = 0;
@@ -63,74 +59,6 @@ int scheduler_remove_node(int node_id) {
     return 0;
 }
 
-int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies) {
-    if (sche == NULL) {
-        return -1;  // sche not initialized
-    }
-    if (sche->num_tasks == MAX_TASKS) {
-        return -2;  // too many tasks
-    }
-
-    struct task* new_task = malloc(sizeof(task));
-    strncpy(new_task->id, task_id, sizeof(new_task->id));
-    strncpy(new_task->command, command, sizeof(new_task->command));
-    new_task->num_dependencies = num_dependencies;
-    new_task->dependencies = malloc(sizeof(char*) * num_dependencies);
-    for (int i = 0; i < num_dependencies; i++) {
-        new_task->dependencies[i] = strdup(dependencies);
-    }
-    new_task->status = 0;  // 0 means pending
-    sche->tasks[sche->num_tasks] = new_task;
-    sche->num_tasks++;
-    LOG_DEBUG("任务提交成功：[id=%s]",task_id);
-    return 0;
-}
-
-int scheduler_cancel_task(const char* task_id) {
-    if (sche == NULL) {
-        return -1;  // sche not initialized
-    }
-
-    int found = 0;
-    for (int i = 0; i < sche->num_tasks; i++) {
-        if (strcmp(sche->tasks[i]->id, task_id) == 0) {
-            found = 1;
-            for (int j = 0; j < sche->tasks[i]->num_dependencies; j++) {
-                free(sche->tasks[i]->dependencies[j]);
-            }
-            free(sche->tasks[i]->dependencies);
-            free(sche->tasks[i]);
-            sche->tasks[i] = sche->tasks[sche->num_tasks - 1];
-            sche->num_tasks--;
-            break;
-        }
-    }
-    if (!found) {
-        return -2;  // task not found
-    }
-    return 0;
-}
-
-int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status) {
-    /*if (sche == NULL) {
-        return -1;  // sche not initialized
-    }
-
-    int found = 0;
-    for (int i = 0; i < sche->num_tasks; i++) {
-        if (strcmp(sche->tasks[i]->id, task_id) == 0) {
-            found = 1;
-            *status = sche->tasks[i]->status;
-            break;
-        }
-    }
-    if (!found) {
-        return -2;  // task not found
-    }*/
-
-    return 0;
-}
-
 int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {
 	int num_nodes = sche->num_nodes;
 	int occu_cnt = 0;
@@ -153,23 +81,28 @@ int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {
 	}
 	return occu_cnt;
 }
+
 void scheduler_cleanup(scheduler* sche) {
-    /*if (sche == NULL) {
+    if (sche == NULL) {
         return;  // sche not initialized
     }
-
     for (int i = 0; i < sche->num_nodes; i++) {
         free(sche->nodes[i]);
     }
-    for (int i = 0; i < sche->num_tasks; i++) {
-        for (int j = 0; j < sche->tasks[i]->num_dependencies; j++) {
-            free(sche->tasks[i]->dependencies[j]);
-        }
-        free(sche->tasks[i]->dependencies);
-        free(sche->tasks[i]);
-    }
     free(sche);
-    sche = NULL;*/
+    sche = NULL;
+}
+
+int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies) {
+    return 0;
+}
+
+int scheduler_cancel_task(const char* task_id) {
+    return 0;
+}
+
+int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status) {
+    return 0;
 }
 
 void scheduler_set_load_balancing_strategy(scheduler* scheduler, LoadBalancingStrategy* strategy, int num_nodes) {

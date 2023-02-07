@@ -1,26 +1,3 @@
-// 集成scheduler、netowrk、rpc三个模块
-
-// scheduler用来进行node和task的管理
-
-// network用于本模块和distributed_nodes之间通信
-
-// rpc用于服务端处理客户端请求
-
-// 在manager中，首先初始化一个scheduler，提供对node和task管理的容器
-
-// 其次建立好网络连接，以等待node的请求
-
-// 最后启动rpc服务，并发布可以远程调用的接口清单
-
-
-/*
-具体操作为：
-	1.使用RPC将scheduler的add、remove的接口发布
-	2.submit task、cancel task的接口不需要发布，在本地的业务代码中，调用这两个接口时，对任务进行操作
-	3.使用某种机制，对submit后的任务进行处理，可以使用的资源为nodes提供的资源
-	
-DM收到消息，用RPC提供的序列化反序列化机制处理，然后操纵调度机
-*/
 
 #ifndef DISTRIBUTED_MANAGER_H
 #define DISTRIBUTED_MANAGER_H
@@ -66,7 +43,9 @@ void process_raw_message(int socket_fd, int recv_size, char* request_buf);
 void process_res_message(int socket_fd, char* request_buf);
 
 // 订阅的rpc函数
-char* rpc_join_cluster();
+char* rpc_join_cluster(const char* params);
+
+char* rpc_exit_cluster(const char* params);
 
 scheduler* distributed_manager_get_scheduler();
 // 向分布式管理机添加一个子节点

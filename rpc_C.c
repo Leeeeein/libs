@@ -35,6 +35,10 @@ int main(int argc, char *argv[]) {
   
   int ret = recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
   ret = recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
+  printf("%s", response_buf);
+  send_packet(sockfd, RES, response_buf, strlen(response_buf)+1, 0);
+  send_packet(sockfd, RES, response_buf, strlen(response_buf)+1, 0);
+  
   
   while(1){}
   close(sockfd);

@@ -26,7 +26,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 1");
-					if(0 == distributed_manager_launch_specified_task("hmm_1", 3, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_1", 5, dataBuf, args->resultBuf, &enumStatus, &desc))
 					{
 						isRunning = 1;
 					}

@@ -125,8 +125,7 @@ int recv_packet(int sockfd, int* type, void *buf, size_t len, int flags)
 		return 0;
 	}
 	*type = header.type;
-	recv(sockfd, buf, header.size, flags);
-	return header.size;
+	return recv(sockfd, buf, header.size, flags);
 }
 
 void free_packet(packet *pkt) {

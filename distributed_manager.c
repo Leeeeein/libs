@@ -24,7 +24,6 @@ char* rpc_join_cluster(const char* params) {
 	int ret = distributed_manager_add_node(cfd);
 	static char result[16];
 	sprintf(result, "%d", ret);
-	printf("qqa  %s\n", result);
 	return result;
 }
 
@@ -34,7 +33,6 @@ char* rpc_exit_cluster(const char* params) {
 	int ret = distributed_manager_remove_node(cfd);
 	static char result[16];
 	sprintf(result, "%d", ret);
-	printf("qqb  %s\n", result);
 	return result;
 }
 
@@ -230,6 +228,9 @@ int distributed_manager_launch_specified_task(const char* task_id, int max_nodes
 			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], part_items_num*desc->single_item_length, 0);
 		else
 			ret = send_packet(nodes[i], DATA, &file[i*part_items_num], desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, 0);
+		printf("items_num: %d, num_usable: %d, single_item_length: %d, big_ass: %d, ret: %d\n",\
+		 desc->data_items_num, num_usable, desc->single_item_length,\
+		 desc->data_items_num*desc->single_item_length - (num_usable-1)*part_items_num*desc->single_item_length, ret);
 		if(ret < 0)
 		{
 			return -1;
@@ -260,11 +261,7 @@ void distributed_manager_cleanup();
 	}*/
 	
 void launch_server(char** argv)
-{
-	// pthread_t id1;
-	// pthread_create(&id1, NULL, (void*)thread_client, NULL);
-    // pthread_detach((pthread_t)(&id1));
-    
+{   
 	init(&map);
 	init_queue(&mq);
 	log_init();

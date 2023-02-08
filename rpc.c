@@ -44,7 +44,7 @@ void rpc_withdraw(const char* name) {
   exit(1);
 }
 
-rpc_response_t* rpc_execute_request(int fd, const rpc_request_t* request) {
+rpc_response_t* rpc_execute_request(int fd, rpc_request_t* request) {
   rpc_response_t* response = (rpc_response_t*)malloc(sizeof(rpc_response_t));
   response->error = NULL;
   for (int i = 0; i < num_services; ++i) {
@@ -54,6 +54,7 @@ rpc_response_t* rpc_execute_request(int fd, const rpc_request_t* request) {
     }
   }
   response->error = "Error: RPC service not found";
+  free(request);
   return response;
 }
 
@@ -81,9 +82,9 @@ char* rpc_serialize_request(const rpc_request_t* request) {
 }
 
 rpc_request_t* rpc_deserialize_request(const char* request_str) {
-  	printf("server received a request to parse: %s.\n", request_str);
+  	printf("server received a request to parse: %s, request length: %d\n", request_str, strlen(request_str));
 	rpc_request_t* request = (rpc_request_t*)malloc(sizeof(rpc_request_t));
-
+	
 	char* start = strstr(request_str, "func:{");
 	char* end = strstr(request_str, "},params:{");
 	int len = end - start - 6;  // 6是"func:{"的长度
@@ -99,21 +100,18 @@ rpc_request_t* rpc_deserialize_request(const char* request_str) {
 	end = strstr(request_str, "}.");
 	len = end - start - 8;  // 8是"params:{"的长度
 	
-	
-	request->params = (char*)malloc(len + s_len + 1 + 1);  // 例如params:{1,2}.socket[11].   生成参数字符串“1,2,11”    len对应着“1,2”,s_len对应着“11”，1对应着“\0”, 第二个1对应着“,”
+	request->params = (char*)malloc(len + s_len + 1 + 1);  // 例如params:{1,2}.socket[11].   生成参数字符串“1,2,11”    len对应着“1,2”,s_len对应着“11”，第一个1对应着“\0”, 第二个1对应着“,”
 	strncpy(request->params, start + 8, len);
+	request->params[len] = '\0';
 	strcat(request->params, ",");
-	strncpy(request->params + len + 1, s_start + 7 , s_len);
-	request->params[len + s_len + 1] = '\0';
-	
+	strncat(request->params + len + 1, s_start + 7 , s_len);
+	request->params[len + s_len + 1 + 1] = '\0';
 	
 	/*request->params = (char*)malloc(len + 1);
 	strncpy(request->params, start + 8, len);
 	request->params[len + 1] = '\0';*/
 	
-	printf("request's method: %s, request's params: %s\n", request->method, request->params);
-
-
+	printf("request's method: %s, request's params: %s, params length: %d\n", request->method, request->params, strlen(request->params));
   	return request;
 }
 

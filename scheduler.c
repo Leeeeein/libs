@@ -31,6 +31,7 @@ int scheduler_add_node(int node_id) {
     new_node->status = 0;
     sche->nodes[sche->num_nodes] = new_node;
     sche->num_nodes++;
+    printf("after adding, fd: %ld, n_fd: %ld, status: %d, number: %d \n", node_id, new_node->fd, new_node->status, sche->num_nodes);
     return 0;
 }
 
@@ -47,16 +48,34 @@ int scheduler_remove_node(int node_id) {
     for (int i = 0; i < sche->num_nodes; i++) {
         if (sche->nodes[i]->fd == node_id) {
             found = 1;
-            free(sche->nodes[i]);
-            sche->nodes[i] = sche->nodes[sche->num_nodes - 1];
+            //free(sche->nodes[i]);
+            //sche->nodes[i] = sche->nodes[sche->num_nodes - 1];
+            // 两种情况，1是i就是最后一个元素，这时直接删除就行，2是i不是最后一个元素，那就覆盖
+            if(i == sche->num_nodes-1)
+            {
+            	free(sche->nodes[i]);
+            }
+            else
+            {
+            	sche->nodes[i]->fd = sche->nodes[sche->num_nodes - 1]->fd;
+            	sche->nodes[i]->status = sche->nodes[sche->num_nodes - 1]->status;
+            	free(sche->nodes[sche->num_nodes-1]);
+            }
             sche->num_nodes--;
             break;
         }
+        printf("node exist: %d", sche->nodes[i]->fd);
     }
+    printf(" node number: %d\n", sche->num_nodes);
+    printf("\n");
     if (!found) {
         return -2;  // node not found
     }
     return 0;
+}
+
+int scheduler_get_nodes_num() {
+	return sche->num_nodes;
 }
 
 int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {

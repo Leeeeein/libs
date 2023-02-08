@@ -16,6 +16,7 @@ static int server_fd;
 
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
+	printf("outter params: %s, length: %d\n", params, strlen(params));
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
 	int ret = distributed_manager_add_node(cfd);
 	static char result[16];
@@ -101,8 +102,11 @@ void* thread_client()
 				   close(fd);
 				   FD_CLR(fd, &fds);
 				   memset(request_buf, 0, sizeof(request_buf));
-				   LOG_INFO("客户端退出连接.[fd:%d].\n", fd);
+				   LOG_INFO("客户端退出连接.[fd:%d]", fd);
 				   distributed_manager_remove_node(fd);
+				   int nodes[10];
+				   int num_usable = scheduler_get_usable_nodes(nodes, 10);
+				   LOG_INFO("当前可用节点数量：%d %d\n", num_usable, scheduler_get_nodes_num());
 				   continue;
 				}
 				message_process(type, fd, ret, request_buf);
@@ -150,14 +154,13 @@ void process_raw_message(int socket_fd, int recv_size, char* message_buf)
 
 void process_rpc_message(int socket_fd, char* request_buf)
 {
-	int ret = 0;
 	sprintf(request_buf+strlen(request_buf), "socket[%d].", socket_fd);
 	printf("get request line : %s\n", request_buf);
 	rpc_request_t* request = rpc_deserialize_request(request_buf);
 	printf("method name: |%s|, method parameters: |%s|\n", request->method, request->params);
 	rpc_response_t* response = rpc_execute_request(socket_fd, request);
 	char* response_str = rpc_serialize_response(response);
-	ret = send_packet(socket_fd, RAW, response_str, sizeof(response_str), 0);
+	send_packet(socket_fd, RAW, response_str, sizeof(response_str), 0);
 }
 
 void process_res_message(int socket_fd, char* request_buf)

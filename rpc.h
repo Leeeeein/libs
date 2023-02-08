@@ -33,7 +33,7 @@ void rpc_publish(const char* name, rpc_function_t func);
 void rpc_withdraw(const char* name);
 
 // Define the function to execute RPC request 
-rpc_response_t* rpc_execute_request(int fd, const rpc_request_t* request);
+rpc_response_t* rpc_execute_request(int fd, rpc_request_t* request);
 
 // Define the serialization and deserialization functions of RPC response 
 char* rpc_serialize_response(const rpc_response_t* response);

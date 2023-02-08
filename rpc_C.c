@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   // char request_buf[1024];
   char response_buf[1024*1024];
 
-  // 发起第二次远程调用
+  // 发起远程调用
   rpc_request_t request2 = {
     .method = "join_cluster",
     .params = "45,20"
@@ -33,8 +33,8 @@ int main(int argc, char *argv[]) {
   rpc_response_t* response2 = rpc_deserialize_response(response_buf);
   printf("request line is: %s, Result2: %s\n", request2_str, response2->result);
   
-  int ret = recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
-  ret = recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
+  recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
+  recv_packet(sockfd, &typ2, response_buf, 1024*1024, 0);
   printf("%s", response_buf);
   send_packet(sockfd, RES, response_buf, strlen(response_buf)+1, 0);
   

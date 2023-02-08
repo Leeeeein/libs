@@ -36,6 +36,7 @@ enum strategy
 
 
 scheduler* get_scheduler();
+
 // 初始化调度机
 int scheduler_init();
 
@@ -53,6 +54,9 @@ int scheduler_cancel_task(const char* task_id);
 
 // 获取任务的执行状态
 int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status);
+
+// 查看当前在线节点数量
+int scheduler_get_nodes_num();
 
 // 获取当前可以使用的计算节点fd数组
 int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num);

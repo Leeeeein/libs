@@ -46,7 +46,7 @@ int create_server(const char *ip, int port) {
     // set port reuse
 	int optval = 1;
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-
+	
     // listen socket
     if (listen(sockfd, 10) < 0) {
         perror("listen");

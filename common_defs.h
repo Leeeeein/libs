@@ -20,6 +20,7 @@ typedef enum
 	PHASE5_COMPLETE,
 	PHASE6_COMPLETE,
 	COMPLETE,
+	FAILURE
 } HMM_PHASES;
 
 typedef struct

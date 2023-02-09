@@ -25,12 +25,16 @@ void fit(HMM_ARGS* args)
 			{	
 				if(0 == isRunning)
 				{
-					LOG_INFO("stage 1");
-					if(0 == distributed_manager_launch_specified_task("hmm_1", 8, dataBuf, args->resultBuf, &enumStatus, &desc))
+					int ret = distributed_manager_launch_specified_task("hmm_1", 8, dataBuf, args->resultBuf, &enumStatus, &desc);
+					LOG_INFO("stage 1, retVal is: %d", ret);
+					if(0 == ret)
 					{
 						isRunning = 1;
 					}
-						
+					else
+					{
+						enumStatus = FAILURE;
+					}	
 				}
 				break;
 			}
@@ -136,11 +140,11 @@ void* thread_command()
 		size_t l = sizeof(buf);
 		buf[l-1] = buf[l];
 		LOG_INPUT("\033[31m%s\033[0m", buf);
-		if(0 == strcmp(buf, "NumOfNodes"))
+		if(0 == strcmp(buf, "cmd1"))
 		{
 			LOG_INFO("%d", distributed_manager_get_scheduler()->num_nodes);
 		}
-		else if(0 == strcmp(buf, "BeginToExec"))
+		else if(0 == strcmp(buf, "cmd2"))
 		{
 			HmmModel model = {1, NULL, NULL, 0, 0};
 			HMM_ARGS args;
@@ -179,7 +183,7 @@ int main(int argc, char** argv)
 	while(1)
 	{
 		printf("程序运行中：等待接受命令或请求\n");
-		sleep(10);
+		sleep(5);
 	}
 	log_uninit();
 	return 0;

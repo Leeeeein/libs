@@ -20,11 +20,8 @@ typedef struct message_queue {
 } message_queue;
 
 void init_queue(struct message_queue *queue) {
-printf("1\n");
     queue->head = NULL;
-printf("2\n");
     queue->tail = NULL;
-printf("3\n");
     queue->size = 0;
     pthread_mutex_init(&(queue->lock), NULL);
 }

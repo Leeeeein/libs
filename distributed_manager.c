@@ -9,10 +9,11 @@
 #include "message_queue.h"
 
 static message_queue mq;
-static pthread_t pFetch;
+// static pthread_t pFetch;
 static Map map;
 static int server_fd;
-
+static int complete_cnt;
+static int used_cnt;
 
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
@@ -103,9 +104,6 @@ void* thread_client()
 				   memset(request_buf, 0, sizeof(request_buf));
 				   LOG_INFO("客户端退出连接.[fd:%d]", fd);
 				   distributed_manager_remove_node(fd);
-				   int nodes[10];
-				   int num_usable = scheduler_get_usable_nodes(nodes, 10);
-				   LOG_INFO("当前可用节点数量：%d %d\n", num_usable, scheduler_get_nodes_num());
 				   continue;
 				}
 				message_process(type, fd, ret, request_buf);
@@ -164,7 +162,13 @@ void process_rpc_message(int socket_fd, char* request_buf)
 
 void process_res_message(int socket_fd, char* request_buf)
 {
-	LOG_DEBUG("\n%s\n\n", request_buf);
+	complete_cnt += 1;
+	LOG_DEBUG("\n%s", request_buf);
+	scheduler_set_node_usable(socket_fd);
+	if(complete_cnt == used_cnt)
+	{
+		LOG_INFO("收到了来自%d个计算节点的全部结果，计算结束.", complete_cnt);
+	}
 }
 
 scheduler* distributed_manager_get_scheduler()
@@ -200,15 +204,19 @@ int distributed_manager_get_task_status(const char* task_id);
 
 int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
 {
+	complete_cnt = 0;
 	int nodes[max_nodes];
 	int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+	used_cnt = num_usable;
 	if(num_usable <= 0)
 	{
 		// printf("usable nodes are not exist.\n");
 		return -1;
 	}
-	map_clean(&map);
+	map_clean(&map); // 这句有问题 2022/02/09
+
 	int part_items_num = desc->data_items_num / num_usable;
+	
 	for(int i = 0; i < num_usable; i++)
 	{
 		int ret = send_packet(nodes[i], LAUNCH, task_id, sizeof(task_id), 0);
@@ -227,9 +235,9 @@ int distributed_manager_launch_specified_task(const char* task_id, int max_nodes
 		sprintf(tmp, "%d", nodes[i]);
 		insert(&map, tmp, i); // map保存了节点编号（即连接时的fd）和执行顺序的pair，这样就可以知道每个节点执行的是第几部分任务
 	}
-    thread_fetch_paras args = {num_usable, result, enumStatus};
-	pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&args);
-	pthread_detach((pthread_t)(&pFetch));
+    // thread_fetch_paras args = {num_usable, result, enumStatus};
+	//pthread_create(&pFetch, NULL, (void*)thread_fetch, (void*)&args);
+	//pthread_detach((pthread_t)(&pFetch));
 	return 0;	
 }
 
@@ -251,8 +259,11 @@ void launch_server(char** argv)
 	init(&map);
 	init_queue(&mq);
 	log_init();
+	LOG_INFO("日志服务创建完成.");
 	rpc_init();
+	LOG_INFO("RPC服务创建完成.");
 	scheduler_init();
+	LOG_INFO("调度器创建完成.");
 	IniConfigManager* cfg = ini_config_manager_create("config.ini");
 	if (cfg == NULL) {
     	LOG_DEBUG("创建配置文件失败：cfg == NULL.\n");
@@ -269,7 +280,7 @@ void launch_server(char** argv)
 		//LOG_ERROR(dm.m_log, "监听服务端创建失败. ret:[%d]", ret);
 		return;
 	}
-    LOG_INFO("监听服务端创建完成.");
+    LOG_INFO("监听服务创建完成.");
 	server_fd = ret;
 	
 	rpc_publish("join_cluster", rpc_join_cluster);

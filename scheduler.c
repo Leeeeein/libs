@@ -63,9 +63,7 @@ int scheduler_remove_node(int node_id) {
             sche->num_nodes--;
             break;
         }
-        printf("node exist: %d", sche->nodes[i]->fd);
     }
-    printf(" node number: %d\n", sche->num_nodes);
     printf("\n");
     if (!found) {
         return -2;  // node not found
@@ -98,6 +96,19 @@ int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num) {
 		++occu_cnt;
 	}
 	return occu_cnt;
+}
+
+int scheduler_set_node_usable(int fd)
+{
+	for(int i = 0; i < sche->num_nodes; i++)
+	{
+		node* cur_node = sche->nodes[i];
+		if(cur_node->fd == fd)
+		{
+			cur_node->status = 0;
+		}
+	}
+	return 0;
 }
 
 void scheduler_cleanup(scheduler* sche) {

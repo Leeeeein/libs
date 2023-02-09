@@ -107,10 +107,6 @@ rpc_request_t* rpc_deserialize_request(const char* request_str) {
 	strncat(request->params + len + 1, s_start + 7 , s_len);
 	request->params[len + s_len + 1 + 1] = '\0';
 	
-	/*request->params = (char*)malloc(len + 1);
-	strncpy(request->params, start + 8, len);
-	request->params[len + 1] = '\0';*/
-	
 	printf("request's method: %s, request's params: %s\n", request->method, request->params);
   	return request;
 }

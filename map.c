@@ -65,11 +65,12 @@ MapEntry next(MapIterator* iterator) {
 }
 
 void map_clean(Map* map) {
-    for (int i = 0; i < map->size; ++i) {
+    /*for (int i = 0; i < map->size; ++i) {
         free(map->entries[i].key);
     }
-    free(map->entries);
+    free(map->entries);*/
     map->entries = NULL;
-    map->size = 0;
-    map->capacity = 0;
+    map->capacity = INITIAL_CAPACITY;
+  	map->size = 0;
+  	map->entries = malloc(sizeof(MapEntry) * map->capacity);
 }

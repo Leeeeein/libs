@@ -58,6 +58,9 @@ int scheduler_get_task_status(scheduler* sche, const char* task_id, int* status)
 // 查看当前在线节点数量
 int scheduler_get_nodes_num();
 
+// 将一个节点的状态设置为可用
+int scheduler_set_node_usable(int fd);
+
 // 获取当前可以使用的计算节点fd数组
 int scheduler_get_usable_nodes(int* nodes_fd, int max_nodes_num);
 

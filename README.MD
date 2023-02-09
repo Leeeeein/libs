@@ -10,13 +10,13 @@
 - 消息队列、字典、有序数组等类 C++ 的数据结构
 
 ## 编译
-'make'
+```make```
 
 ## 启动服务端实例
-'server_example.c <ip> <port>'
+```server_example.c <ip> <port>```
 
 ## 启动计算节点
-'worker_example.c <ip> <port>'
+```worker_example.c <ip> <port>```
 
 服务端可以通过向控制台发送命令来启动任务。现在仅设置了两个命令：
 - `cmd1`：查看已连接的节点数量
@@ -28,7 +28,7 @@
 
 运行时日志被保存在 `application.log` 中。
 目录结构：
-'''
+```
 ├── application.log
 ├── cfg_node.ini
 ├── common_defs.c
@@ -72,5 +72,5 @@
 ├── worker_example
 ├── worker_example.c
 └── work.h
-'''
+```
 

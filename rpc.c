@@ -82,7 +82,7 @@ char* rpc_serialize_request(const rpc_request_t* request) {
 }
 
 rpc_request_t* rpc_deserialize_request(const char* request_str) {
-  	printf("server received a request to parse: %s, request length: %d\n", request_str, strlen(request_str));
+  	printf("server received a request to parse: %s", request_str);
 	rpc_request_t* request = (rpc_request_t*)malloc(sizeof(rpc_request_t));
 	
 	char* start = strstr(request_str, "func:{");
@@ -111,7 +111,7 @@ rpc_request_t* rpc_deserialize_request(const char* request_str) {
 	strncpy(request->params, start + 8, len);
 	request->params[len + 1] = '\0';*/
 	
-	printf("request's method: %s, request's params: %s, params length: %d\n", request->method, request->params, strlen(request->params));
+	printf("request's method: %s, request's params: %s\n", request->method, request->params);
   	return request;
 }
 

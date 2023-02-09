@@ -16,7 +16,6 @@ static int server_fd;
 
 char* rpc_join_cluster(const char* params) {
 	int a, b, cfd;
-	printf("outter params: %s, length: %d\n", params, strlen(params));
 	sscanf(params, "%d, %d, %d", &a, &b, &cfd);
 	int ret = distributed_manager_add_node(cfd);
 	static char result[16];

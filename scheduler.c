@@ -31,7 +31,6 @@ int scheduler_add_node(int node_id) {
     new_node->status = 0;
     sche->nodes[sche->num_nodes] = new_node;
     sche->num_nodes++;
-    printf("after adding, fd: %ld, n_fd: %ld, status: %d, number: %d \n", node_id, new_node->fd, new_node->status, sche->num_nodes);
     return 0;
 }
 

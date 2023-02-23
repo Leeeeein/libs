@@ -64,7 +64,13 @@ int distributed_manager_cancel_task(const char* task_id);
 int distributed_manager_get_task_status(const char* task_id);
 
 // 启动指定编号的任务
-int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc);
+int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, TASK_DESCRIPTION* desc);
+
+// 启动指定编号的任务, file需要进行处理，提取公共部分
+int distributed_manager_launch_specified_task2(const char* task_id, int max_nodes, char* commData, int commDataLen, char* file, TASK_DESCRIPTION* desc);
+
+// 启动指定编号的任务，但是数据的分发和节点的选择在外部完成，在函数中直接发送
+int distributed_manager_launch_specified_task_divide(const char* task_id, int node_id, char* file, int dataLen);
 
 // 设置负载均衡策略
 void distributed_manager_set_load_balancing_strategy(const char* strategy);

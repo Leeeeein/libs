@@ -23,6 +23,13 @@ typedef enum
 	FAILURE
 } HMM_PHASES;
 
+typedef enum
+{
+	LOW,
+	MEDIUM,
+	HIGH,
+} Tasks_Priorities;
+
 typedef struct
 {
 	HmmModel* model;

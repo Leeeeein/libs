@@ -2,6 +2,7 @@
 #include <string.h>
 #include "log.h"
 #include "scheduler.h"
+#include "common_defs.h"
 
 static scheduler* sche = NULL;
 
@@ -16,6 +17,7 @@ int scheduler_init() {
     }
     sche = malloc(sizeof(scheduler));
     sche->num_nodes = 0;
+    sche->num_tasks = 0;
     return 0;
 }
 
@@ -124,6 +126,22 @@ void scheduler_cleanup(scheduler* sche) {
 
 int scheduler_submit_task(const char* task_id, const char* command, const char* dependencies, int num_dependencies) {
     return 0;
+}
+
+int scheduler_add_task(const char* task_id, const char* dataFile, int priority) {
+	task* curTask = (task*)malloc(sizeof(task));
+	if(strlen(dataFile)+1 > sizeof(curTask->dataFile))
+	{
+		LOG_INFO("数据长度超出最大接受数据集长度");
+		free(curTask); //后面也记得释放内存
+		return -1;
+	}
+	memcpy(curTask->id, task_id, strlen(task_id)+1);
+	memcpy(curTask->dataFile, dataFile, strlen(dataFile)+1);
+	curTask->status = 0;
+	sche->tasks[sche->num_tasks] = curTask;
+    sche->num_tasks++;
+	return 0;
 }
 
 int scheduler_cancel_task(const char* task_id) {

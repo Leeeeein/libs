@@ -194,6 +194,12 @@ int distributed_manager_submit_task(const char* task_id, const char* command, co
 	return ret;
 }
 
+int distributed_manager_add_task(const char* task_id, const char* dataFile)
+{
+	int ret = distributed_manager_add_task(task_id, dataFile);
+	return ret;
+}
+
 int distributed_manager_cancel_task(const char* task_id)
 {
 	int ret = scheduler_cancel_task(task_id);
@@ -202,7 +208,61 @@ int distributed_manager_cancel_task(const char* task_id)
 
 int distributed_manager_get_task_status(const char* task_id);
 
-int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, char* result, HMM_PHASES* enumStatus, TASK_DESCRIPTION* desc)
+
+int distributed_manager_launch_specified_task_divide(const char* task_id, int node_id, char* file, int dataLen)
+{
+	int ret = send_packet(node_id, LAUNCH, task_id, sizeof(task_id), 0);
+	ret = send_packet(node_id, DATA, &file, dataLen, 0);
+	if(ret < 0)
+		return -1;
+	return 0;
+}
+
+int distributed_manager_launch_specified_task2(const char* task_id, int max_nodes, char* commData, int commDataLen, char* file, TASK_DESCRIPTION* desc) {
+    // 计算需要发送的数据总长度
+    int commData_len = commDataLen;
+    int file_len = desc->data_items_num * desc->single_item_length;
+    int total_len = sizeof(int) * 4 + commData_len + file_len;
+
+    // 发送缓冲区，复用这个缓冲区，先保存公共的数据
+    char* buffer = (char*)malloc(total_len);
+    int* p = (int*)(buffer);
+    *p = commData_len;
+    *(p+1) = file_len;
+    *(p+2) = desc->data_items_num;
+    *(p+3) = desc->single_item_length;
+    char* p_data = buffer + sizeof(int) * 4;
+    memcpy(p_data, commData, commData_len);
+    
+    // 分配节点并发送数据
+    int nodes[max_nodes];
+    int num_usable = scheduler_get_usable_nodes(nodes, max_nodes);
+    int num_items = desc->data_items_num / num_usable;
+    int remainder = desc->data_items_num % num_usable;
+    int start = 0;
+    int end = 0;
+    
+    for (int i = 0; i < num_usable; ++i) {
+        end = start + num_items + (i < remainder ? 1 : 0);
+        if (i == num_usable - 1) { // 最后一个节点分配剩余数据
+            end = desc->data_items_num;
+        }
+        int data_len = (end - start) * desc->single_item_length;
+        
+        memcpy(p_data, file + start*desc->single_item_length, data_len);
+        
+        int ret = send_packet(nodes[i], DATA, buffer, sizeof(int)*4+commData_len+(end - start) * desc->single_item_length , 0);
+        if (ret < 0) {
+            return -1;
+        }
+        start = end;
+    }
+
+    free(buffer);
+    return 0;
+}
+
+int distributed_manager_launch_specified_task(const char* task_id, int max_nodes, char* file, TASK_DESCRIPTION* desc)
 {
 	complete_cnt = 0;
 	int nodes[max_nodes];

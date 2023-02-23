@@ -2,8 +2,13 @@
 #define DISTRIBUTED_SCHEDULER_H
 
 #define MAX_NODES 1000
-#define MAX_TASKS 10000
+#define MAX_TASKS 3
+#define MAX_TASK_ID_SIZE 128
+#define MAX_DATAFILE_SIZE 1024*1024
 #define INT_MAX 5
+
+#include "map.h"
+
 // 定义负载均衡策略结构体
 typedef struct {
   int type;	// 负载均衡策略类型
@@ -17,15 +22,19 @@ typedef struct node {
 
 typedef struct task {
     char id[32];
-    char command[1024];
-    int num_dependencies;
-    char** dependencies;
+    //char command[1024];
+    //int num_dependencies;
+    //char** dependencies;
+    char dataFile[MAX_DATAFILE_SIZE];
     int status;
+    int priority;
 } task;
 
 typedef struct scheduler {
     int num_nodes;
+    int num_tasks;
     struct node* nodes[MAX_NODES];
+    struct task* tasks[MAX_TASKS];
 } scheduler;
 
 enum strategy

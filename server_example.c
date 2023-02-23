@@ -25,7 +25,7 @@ void fit(HMM_ARGS* args)
 			{	
 				if(0 == isRunning)
 				{
-					int ret = distributed_manager_launch_specified_task("hmm_1", 8, dataBuf, args->resultBuf, &enumStatus, &desc);
+					int ret = distributed_manager_launch_specified_task("hmm_1", 8, dataBuf, &desc);
 					LOG_INFO("stage 1, retVal is: %d", ret);
 					if(0 == ret)
 					{
@@ -46,7 +46,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 2");
-					if(0 == distributed_manager_launch_specified_task("hmm_2", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_2", args->model->max_nodes_num, dataBuf, &desc))
 					{
 						isRunning = 1;
 					}
@@ -61,7 +61,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 3");
-					if(0 == distributed_manager_launch_specified_task("hmm_3", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_3", args->model->max_nodes_num, dataBuf, &desc))
 					{
 						isRunning = 1;
 					}
@@ -76,7 +76,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 4");
-					if(0 == distributed_manager_launch_specified_task("hmm_4", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_4", args->model->max_nodes_num, dataBuf, &desc))
 					{
 						isRunning = 1;
 					}
@@ -91,7 +91,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 5");
-					if(0 == distributed_manager_launch_specified_task("hmm_5", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_5", args->model->max_nodes_num, dataBuf, &desc))
 					{
 						isRunning = 1;
 					}
@@ -106,7 +106,7 @@ void fit(HMM_ARGS* args)
 				if(0 == isRunning)
 				{
 					LOG_INFO("stage 6");
-					if(0 == distributed_manager_launch_specified_task("hmm_6", args->model->max_nodes_num, dataBuf, args->resultBuf, &enumStatus, &desc))
+					if(0 == distributed_manager_launch_specified_task("hmm_6", args->model->max_nodes_num, dataBuf, &desc))
 					{
 						isRunning = 1;
 					}
@@ -150,9 +150,9 @@ void* thread_command()
 			HMM_ARGS args;
 			char result[1024*1024];
 			args.model = &model;
-			strcpy(args.filePath, "/home/liyinzhe/Workspace/FolderForLibs/inc/data.txt");
+			strcpy(args.filePath, "./data.txt");
 			args.resultBuf = result;
-			strcpy(args.resultPath, "/home/liyinzhe/Workspace/FolderForLibs/inc");
+			strcpy(args.resultPath, "./result/");
 			
 			pthread_t pid;
 			pthread_create(&pid, NULL, (void*)fit, (void*)&args);
